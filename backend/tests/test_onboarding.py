@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -5,6 +6,7 @@ import pytest
 from app.bot import responses
 from app.bot.onboarding import handle_registered_user_message, is_valid_name
 from app.bot.webhook import process_telegram_message
+from app.services.rule_parser import today_jakarta
 
 pytestmark = pytest.mark.asyncio
 
@@ -91,6 +93,16 @@ class StaleFirstReadUsersRepository(FakeUsersRepository):
         return user
 
 
+class FakeTransactionsRepository:
+    def __init__(self) -> None:
+        self.transactions: list[dict[str, Any]] = []
+
+    def create(self, **payload: Any) -> dict[str, Any]:
+        row = {"id": f"tx-{len(self.transactions) + 1}", **payload}
+        self.transactions.append(row)
+        return row
+
+
 class FakeTelegramClient:
     def __init__(self) -> None:
         self.messages: list[tuple[int, str]] = []
@@ -116,6 +128,8 @@ async def test_missing_or_inactive_users_are_rejected() -> None:
         chat_id=1234,
         users_repository=repository,  # type: ignore[arg-type]
         telegram_client=telegram_client,
+        transactions_repository=FakeTransactionsRepository(),
+        parser_confidence_threshold=0.75,
     )
     inactive_allowed = await handle_registered_user_message(
         text="Halo",
@@ -123,6 +137,8 @@ async def test_missing_or_inactive_users_are_rejected() -> None:
         chat_id=1234,
         users_repository=repository,  # type: ignore[arg-type]
         telegram_client=telegram_client,
+        transactions_repository=FakeTransactionsRepository(),
+        parser_confidence_threshold=0.75,
     )
 
     assert missing_allowed is False
@@ -144,6 +160,8 @@ async def test_pending_user_is_asked_for_first_name() -> None:
         chat_id=1234,
         users_repository=repository,  # type: ignore[arg-type]
         telegram_client=telegram_client,
+        transactions_repository=FakeTransactionsRepository(),
+        parser_confidence_threshold=0.75,
     )
 
     assert allowed is False
@@ -162,6 +180,8 @@ async def test_first_name_is_validated_saved_and_moves_to_last_name() -> None:
         chat_id=1234,
         users_repository=repository,  # type: ignore[arg-type]
         telegram_client=telegram_client,
+        transactions_repository=FakeTransactionsRepository(),
+        parser_confidence_threshold=0.75,
     )
     valid_allowed = await handle_registered_user_message(
         text="Budi",
@@ -169,6 +189,8 @@ async def test_first_name_is_validated_saved_and_moves_to_last_name() -> None:
         chat_id=1234,
         users_repository=repository,  # type: ignore[arg-type]
         telegram_client=telegram_client,
+        transactions_repository=FakeTransactionsRepository(),
+        parser_confidence_threshold=0.75,
     )
 
     assert invalid_allowed is False
@@ -196,6 +218,8 @@ async def test_last_name_is_validated_saved_and_completes_onboarding() -> None:
         chat_id=1234,
         users_repository=repository,  # type: ignore[arg-type]
         telegram_client=telegram_client,
+        transactions_repository=FakeTransactionsRepository(),
+        parser_confidence_threshold=0.75,
     )
     valid_allowed = await handle_registered_user_message(
         text="Santoso",
@@ -203,6 +227,8 @@ async def test_last_name_is_validated_saved_and_completes_onboarding() -> None:
         chat_id=1234,
         users_repository=repository,  # type: ignore[arg-type]
         telegram_client=telegram_client,
+        transactions_repository=FakeTransactionsRepository(),
+        parser_confidence_threshold=0.75,
     )
 
     assert invalid_allowed is False
@@ -230,6 +256,8 @@ async def test_completion_message_uses_refetched_first_name() -> None:
         chat_id=1234,
         users_repository=repository,  # type: ignore[arg-type]
         telegram_client=telegram_client,
+        transactions_repository=FakeTransactionsRepository(),
+        parser_confidence_threshold=0.75,
     )
 
     assert allowed is True
@@ -238,8 +266,9 @@ async def test_completion_message_uses_refetched_first_name() -> None:
     ]
 
 
-async def test_completed_user_reaches_placeholder_normal_flow() -> None:
+async def test_completed_user_saves_expense_transaction_payload() -> None:
     repository = FakeUsersRepository()
+    transactions_repository = FakeTransactionsRepository()
     telegram_client = FakeTelegramClient()
     repository.add_user(
         111,
@@ -254,10 +283,121 @@ async def test_completed_user_reaches_placeholder_normal_flow() -> None:
         chat_id=1234,
         users_repository=repository,  # type: ignore[arg-type]
         telegram_client=telegram_client,
+        transactions_repository=transactions_repository,
+        parser_confidence_threshold=0.75,
     )
 
     assert allowed is True
-    assert telegram_client.messages == [(1234, responses.NORMAL_FLOW_PLACEHOLDER)]
+    assert transactions_repository.transactions == [
+        {
+            "id": "tx-1",
+            "user_id": "user-111",
+            "transaction_type": "expense",
+            "name": "Parkir",
+            "category": "transportasi",
+            "amount": Decimal("5000"),
+            "transaction_date": today_jakarta(),
+            "source": "telegram_chat",
+            "parser": "rule_based",
+            "confidence_score": 1.0,
+            "raw_message": "Bayar parkir 5000",
+        }
+    ]
+    assert telegram_client.messages == [
+        (1234, "Oke, pengeluaran parkir Rp5.000 sudah tercatat.")
+    ]
+
+
+async def test_completed_user_saves_income_transaction() -> None:
+    repository = FakeUsersRepository()
+    transactions_repository = FakeTransactionsRepository()
+    telegram_client = FakeTelegramClient()
+    repository.add_user(111, onboarding_status="completed")
+
+    allowed = await handle_registered_user_message(
+        text="Gaji masuk 8000000",
+        telegram_user_id=111,
+        chat_id=1234,
+        users_repository=repository,  # type: ignore[arg-type]
+        telegram_client=telegram_client,
+        transactions_repository=transactions_repository,
+        parser_confidence_threshold=0.75,
+    )
+
+    assert allowed is True
+    assert transactions_repository.transactions[0]["transaction_type"] == "income"
+    assert transactions_repository.transactions[0]["amount"] == Decimal("8000000")
+    assert telegram_client.messages == [
+        (1234, "Oke, pemasukan transaksi Rp8.000.000 sudah tercatat.")
+    ]
+
+
+async def test_low_confidence_parse_asks_clarification_without_saving() -> None:
+    repository = FakeUsersRepository()
+    transactions_repository = FakeTransactionsRepository()
+    telegram_client = FakeTelegramClient()
+    repository.add_user(111, onboarding_status="completed")
+
+    allowed = await handle_registered_user_message(
+        text="Parkir 5000",
+        telegram_user_id=111,
+        chat_id=1234,
+        users_repository=repository,  # type: ignore[arg-type]
+        telegram_client=telegram_client,
+        transactions_repository=transactions_repository,
+        parser_confidence_threshold=0.75,
+    )
+
+    assert allowed is False
+    assert transactions_repository.transactions == []
+    # Parser's clarification question or fallback should be sent
+    assert len(telegram_client.messages) == 1
+    chat_id, message = telegram_client.messages[0]
+    assert chat_id == 1234
+    assert "pemasukan" in message.lower() or "pengeluaran" in message.lower()
+
+
+async def test_incomplete_onboarding_does_not_create_transaction() -> None:
+    repository = FakeUsersRepository()
+    transactions_repository = FakeTransactionsRepository()
+    telegram_client = FakeTelegramClient()
+    repository.add_user(111, onboarding_status="pending")
+
+    allowed = await handle_registered_user_message(
+        text="Bayar parkir 5000",
+        telegram_user_id=111,
+        chat_id=1234,
+        users_repository=repository,  # type: ignore[arg-type]
+        telegram_client=telegram_client,
+        transactions_repository=transactions_repository,
+        parser_confidence_threshold=0.75,
+    )
+
+    assert allowed is False
+    assert transactions_repository.transactions == []
+    assert telegram_client.messages == [(1234, responses.ASK_FIRST_NAME)]
+
+
+async def test_negative_amount_is_rejected_without_saving() -> None:
+    repository = FakeUsersRepository()
+    transactions_repository = FakeTransactionsRepository()
+    telegram_client = FakeTelegramClient()
+    repository.add_user(111, onboarding_status="completed")
+
+    # Parser might return negative amount for refund-like scenarios
+    # Test that such amounts are rejected and clarification is asked
+    allowed = await handle_registered_user_message(
+        text="Refund -5000",
+        telegram_user_id=111,
+        chat_id=1234,
+        users_repository=repository,  # type: ignore[arg-type]
+        telegram_client=telegram_client,
+        transactions_repository=transactions_repository,
+        parser_confidence_threshold=0.75,
+    )
+
+    assert allowed is False
+    assert transactions_repository.transactions == []
 
 
 async def test_admin_command_does_not_run_onboarding() -> None:
@@ -271,7 +411,9 @@ async def test_admin_command_does_not_run_onboarding() -> None:
         chat_id=1234,
         admin_telegram_id=999,
         users_repository=repository,  # type: ignore[arg-type]
+        transactions_repository=FakeTransactionsRepository(),  # type: ignore[arg-type]
         telegram_client=telegram_client,  # type: ignore[arg-type]
+        parser_confidence_threshold=0.75,
     )
 
     assert user["onboarding_status"] == "pending"

@@ -6,7 +6,12 @@ from fastapi.testclient import TestClient
 
 from app.bot import responses
 from app.bot.commands import handle_admin_command
-from app.bot.webhook import get_settings, get_telegram_client, get_users_repository
+from app.bot.webhook import (
+    get_settings,
+    get_telegram_client,
+    get_transactions_repository,
+    get_users_repository,
+)
 from app.main import app
 
 pytestmark = pytest.mark.asyncio
@@ -70,6 +75,11 @@ class FakeUsersRepository:
         return list(self.users.values())
 
 
+class FakeTransactionsRepository:
+    def __init__(self) -> None:
+        self.transactions: list[dict[str, Any]] = []
+
+
 class FakeTelegramClient:
     def __init__(self) -> None:
         self.messages: list[tuple[int, str]] = []
@@ -98,6 +108,7 @@ class FailingTelegramClient:
 class FakeSettings:
     telegram_bot_token: str = "test-token"
     admin_telegram_id: int = 999
+    parser_confidence_threshold: float = 0.75
 
 
 async def run_command(
@@ -211,6 +222,7 @@ async def test_telegram_webhook_accepts_update_and_returns_ok() -> None:
     telegram_client = FakeTelegramClient()
     app.dependency_overrides[get_settings] = lambda: FakeSettings()
     app.dependency_overrides[get_users_repository] = lambda: repository
+    app.dependency_overrides[get_transactions_repository] = FakeTransactionsRepository
     app.dependency_overrides[get_telegram_client] = lambda: telegram_client
 
     try:
@@ -239,6 +251,7 @@ async def test_telegram_webhook_accepts_update_and_returns_ok() -> None:
 async def test_telegram_webhook_hides_processing_errors() -> None:
     app.dependency_overrides[get_settings] = lambda: FakeSettings()
     app.dependency_overrides[get_users_repository] = lambda: FakeUsersRepository()
+    app.dependency_overrides[get_transactions_repository] = FakeTransactionsRepository
     app.dependency_overrides[get_telegram_client] = lambda: FailingTelegramClient()
 
     try:

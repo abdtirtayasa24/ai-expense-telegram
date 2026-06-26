@@ -1,6 +1,7 @@
 from typing import Any, Protocol
 
 from app.bot import responses
+from app.bot.transactions import TransactionCreator, handle_transaction_message
 from app.repositories.base import Row
 from app.repositories.users_repository import UsersRepository
 
@@ -20,6 +21,8 @@ async def handle_registered_user_message(
     chat_id: int,
     users_repository: UsersRepository,
     telegram_client: TelegramMessageSender,
+    transactions_repository: TransactionCreator,
+    parser_confidence_threshold: float,
 ) -> bool:
     user = users_repository.get_by_telegram_user_id(telegram_user_id)
     if user is None or user.get("status") != "active":
@@ -28,8 +31,14 @@ async def handle_registered_user_message(
 
     onboarding_status = user.get("onboarding_status")
     if onboarding_status == "completed":
-        await telegram_client.send_message(chat_id, responses.NORMAL_FLOW_PLACEHOLDER)
-        return True
+        return await handle_transaction_message(
+            text=text,
+            user=user,
+            chat_id=chat_id,
+            transactions_repository=transactions_repository,
+            telegram_client=telegram_client,
+            parser_confidence_threshold=parser_confidence_threshold,
+        )
 
     if onboarding_status == "pending":
         users_repository.update_onboarding_status(user["id"], "asking_first_name")

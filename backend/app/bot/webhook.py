@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from app.bot.commands import handle_admin_command
 from app.bot.onboarding import handle_registered_user_message
 from app.integrations.telegram_client import TelegramClient
+from app.repositories.transactions_repository import TransactionsRepository
 from app.repositories.users_repository import UsersRepository
 
 router = APIRouter()
@@ -27,6 +28,10 @@ def get_users_repository() -> UsersRepository:
     return UsersRepository()
 
 
+def get_transactions_repository() -> TransactionsRepository:
+    return TransactionsRepository()
+
+
 def get_telegram_client(
     settings: Annotated[Any, Depends(get_settings)],
 ) -> TelegramClient:
@@ -39,6 +44,10 @@ async def telegram_webhook(
     background_tasks: BackgroundTasks,
     settings: Annotated[Any, Depends(get_settings)],
     users_repository: Annotated[UsersRepository, Depends(get_users_repository)],
+    transactions_repository: Annotated[
+        TransactionsRepository,
+        Depends(get_transactions_repository),
+    ],
     telegram_client: Annotated[TelegramClient, Depends(get_telegram_client)],
 ) -> TelegramWebhookResponse:
     message = update.get("message")
@@ -65,7 +74,9 @@ async def telegram_webhook(
         chat_id=chat_id,
         admin_telegram_id=settings.admin_telegram_id,
         users_repository=users_repository,
+        transactions_repository=transactions_repository,
         telegram_client=telegram_client,
+        parser_confidence_threshold=settings.parser_confidence_threshold,
     )
     return TelegramWebhookResponse(ok=True)
 
@@ -76,7 +87,9 @@ async def process_telegram_message(
     chat_id: int,
     admin_telegram_id: int,
     users_repository: UsersRepository,
+    transactions_repository: TransactionsRepository,
     telegram_client: TelegramClient,
+    parser_confidence_threshold: float,
 ) -> None:
     try:
         handled = await handle_admin_command(
@@ -94,7 +107,9 @@ async def process_telegram_message(
             telegram_user_id=sender_telegram_user_id,
             chat_id=chat_id,
             users_repository=users_repository,
+            transactions_repository=transactions_repository,
             telegram_client=telegram_client,
+            parser_confidence_threshold=parser_confidence_threshold,
         )
     except Exception:
         logger.exception("Failed to process Telegram webhook update.")

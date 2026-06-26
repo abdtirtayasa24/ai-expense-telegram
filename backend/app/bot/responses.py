@@ -19,8 +19,9 @@ INVALID_NAME = (
     "Nama harus 2-50 karakter dan hanya boleh berisi huruf, spasi, apostrof, "
     "atau tanda hubung."
 )
-NORMAL_FLOW_PLACEHOLDER = (
-    "Profil kamu sudah lengkap. Fitur pencatatan transaksi akan segera tersedia."
+PARSER_CLARIFICATION = (
+    "Maaf, aku belum yakin mencatat transaksi ini. Bisa tulis ulang dengan "
+    "format seperti: Bayar parkir 5000?"
 )
 
 
