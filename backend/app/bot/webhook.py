@@ -5,6 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel
 
 from app.bot.commands import handle_admin_command
+from app.bot.onboarding import handle_registered_user_message
 from app.integrations.telegram_client import TelegramClient
 from app.repositories.users_repository import UsersRepository
 
@@ -78,11 +79,20 @@ async def process_telegram_message(
     telegram_client: TelegramClient,
 ) -> None:
     try:
-        await handle_admin_command(
+        handled = await handle_admin_command(
             text=text,
             sender_telegram_user_id=sender_telegram_user_id,
             chat_id=chat_id,
             admin_telegram_id=admin_telegram_id,
+            users_repository=users_repository,
+            telegram_client=telegram_client,
+        )
+        if handled:
+            return
+        await handle_registered_user_message(
+            text=text,
+            telegram_user_id=sender_telegram_user_id,
+            chat_id=chat_id,
             users_repository=users_repository,
             telegram_client=telegram_client,
         )
