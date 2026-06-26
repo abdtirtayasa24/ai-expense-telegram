@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.routes import health
+from app.bot.webhook import router as telegram_webhook_router
 
 app = FastAPI(
     title="AI Telegram Expense Tracker",
@@ -8,3 +9,4 @@ app = FastAPI(
 )
 
 app.include_router(health.router, prefix="/health", tags=["health"])
+app.include_router(telegram_webhook_router, prefix="/webhooks", tags=["telegram"])
