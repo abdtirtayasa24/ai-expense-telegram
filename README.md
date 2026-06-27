@@ -17,22 +17,6 @@ Users record expenses and income by chatting with a Telegram bot in Indonesian n
 | Auth | Telegram initData HMAC + JWT |
 | Deployment | Docker (backend), Vercel/Netlify (frontend) |
 
-## Implemented Milestones
-
-- [x] Repository and tooling bootstrap (M0)
-- [x] Database repository layer (M1)
-- [x] Telegram webhook and admin commands (M2)
-- [x] User authorization and onboarding (M3)
-- [x] Rule-based transaction parser (M4)
-- [x] Transaction creation from bot (M5)
-- [x] Gemini fallback parser (M6)
-- [x] Mini App authentication (M7)
-- [x] Transaction CRUD API and UI (M8)
-- [x] Dashboard API and UI (M9)
-- [x] Budget CRUD API and UI (M10)
-- [x] Advisor service and guardrails (M11)
-- [ ] Production deployment (M12)
-
 ## Project Structure
 
 ```text
