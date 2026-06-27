@@ -102,8 +102,125 @@ dd {
     background: #fff7f7;
 }
 
+.dashboard-overview,
 .transactions-section {
     width: min(100%, 960px);
+}
+
+.dashboard-overview .summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 20px;
+}
+
+.dashboard-card {
+    border: 1px solid #e5edf7;
+    border-radius: 20px;
+    background: #fbfdff;
+    padding: 16px;
+}
+
+.dashboard-card h2 {
+    margin: 0 0 14px;
+    color: #0f172a;
+    font-size: 1.05rem;
+}
+
+.muted-text {
+    margin: 0;
+    color: #6b7b91;
+    line-height: 1.6;
+}
+
+.breakdown-list,
+.trend-list,
+.recent-list {
+    display: grid;
+    gap: 12px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.breakdown-row,
+.recent-list li,
+.trend-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.breakdown-row span,
+.trend-list span,
+.recent-list span {
+    color: #526173;
+    text-transform: capitalize;
+}
+
+.breakdown-row strong,
+.recent-list strong,
+.trend-list strong {
+    color: #0f172a;
+    white-space: nowrap;
+}
+
+.progress-track,
+.trend-bars {
+    overflow: hidden;
+    border-radius: 999px;
+    background: #edf4ff;
+}
+
+.progress-track {
+    height: 8px;
+    margin: 8px 0 4px;
+}
+
+.progress-track span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #2374e1;
+}
+
+.breakdown-list small {
+    color: #6b7b91;
+}
+
+.trend-bars {
+    display: grid;
+    flex: 1;
+    gap: 4px;
+    min-width: 120px;
+    padding: 4px;
+}
+
+.trend-bars span {
+    display: block;
+    height: 7px;
+    min-width: 2px;
+    border-radius: 999px;
+}
+
+.income-bar {
+    background: #12b76a;
+}
+
+.expense-bar {
+    background: #f04438;
+}
+
+.recent-card {
+    margin-top: 14px;
+}
+
+.transactions-section {
     border: 1px solid #dce5f2;
     border-radius: 24px;
     background: #ffffff;
@@ -298,6 +415,11 @@ button:disabled {
 }
 
 @media (max-width: 760px) {
+    .dashboard-overview .summary-grid,
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
     .section-header,
     .transaction-item,
     .transaction-actions {

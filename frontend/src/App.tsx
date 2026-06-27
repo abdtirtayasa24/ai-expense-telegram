@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 import { type AuthenticatedUser, loginWithTelegramMiniApp } from "./api/auth";
+import { DashboardOverview } from "./components/DashboardOverview";
 import { TransactionsPanel } from "./components/TransactionsPanel";
-import { formatRupiah } from "./utils/currency";
 
 type AuthState =
     | { status: "loading" }
@@ -85,32 +85,14 @@ export default function App() {
 
     return (
         <main className="app-shell dashboard-shell">
-            <section className="hero-card">
-                <p className="eyebrow">Telegram Mini App</p>
-                <h1>AI Expense Tracker</h1>
-                <p className="description">
-                    Halo {authState.user.first_name ?? "kamu"}, dashboard kamu siap
-                    terhubung dengan autentikasi Telegram Mini App.
-                </p>
-                <dl className="summary-grid" aria-label="Contoh ringkasan bulanan">
-                    <div>
-                        <dt>Pemasukan</dt>
-                        <dd>{formatRupiah(0)}</dd>
-                    </div>
-                    <div>
-                        <dt>Pengeluaran</dt>
-                        <dd>{formatRupiah(0)}</dd>
-                    </div>
-                    <div>
-                        <dt>Cashflow</dt>
-                        <dd>{formatRupiah(0)}</dd>
-                    </div>
-                </dl>
-                <p className="note">
-                    Autentikasi berhasil. Milestone berikutnya akan menghubungkan data
-                    transaksi dan dashboard.
-                </p>
-            </section>
+            <DashboardOverview
+                token={authState.token}
+                firstName={authState.user.first_name}
+                onUnauthorized={(message) => {
+                    localStorage.removeItem("access_token");
+                    setAuthState({ status: "denied", message });
+                }}
+            />
             <TransactionsPanel
                 token={authState.token}
                 onUnauthorized={(message) => {
