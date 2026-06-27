@@ -220,6 +220,11 @@ dd {
     margin-top: 14px;
 }
 
+.over-budget {
+    border-color: #fecaca;
+    background: #fff7f7;
+}
+
 .transactions-section {
     border: 1px solid #dce5f2;
     border-radius: 24px;
