@@ -4,6 +4,7 @@ import axios from "axios";
 import { type AuthenticatedUser, loginWithTelegramMiniApp } from "./api/auth";
 import { DashboardOverview } from "./components/DashboardOverview";
 import { BudgetPanel } from "./components/BudgetPanel";
+import { InsightPanel } from "./components/InsightPanel";
 import { TransactionsPanel } from "./components/TransactionsPanel";
 
 type AuthState =
@@ -95,6 +96,13 @@ export default function App() {
                 }}
             />
             <BudgetPanel
+                token={authState.token}
+                onUnauthorized={(message) => {
+                    localStorage.removeItem("access_token");
+                    setAuthState({ status: "denied", message });
+                }}
+            />
+            <InsightPanel
                 token={authState.token}
                 onUnauthorized={(message) => {
                     localStorage.removeItem("access_token");
