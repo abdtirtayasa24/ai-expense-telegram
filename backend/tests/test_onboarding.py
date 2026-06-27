@@ -354,7 +354,7 @@ async def test_low_confidence_parse_asks_clarification_without_saving() -> None:
     assert len(telegram_client.messages) == 1
     chat_id, message = telegram_client.messages[0]
     assert chat_id == 1234
-    assert "pemasukan" in message.lower() or "pengeluaran" in message.lower()
+    assert "belum yakin" in message.lower()
 
 
 async def test_incomplete_onboarding_does_not_create_transaction() -> None:
