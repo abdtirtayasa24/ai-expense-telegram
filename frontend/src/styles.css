@@ -26,6 +26,12 @@ body {
     padding: 24px;
 }
 
+.dashboard-shell {
+    align-content: start;
+    gap: 20px;
+    place-items: stretch;
+}
+
 .hero-card {
     width: min(100%, 720px);
     border: 1px solid #dce5f2;
@@ -94,6 +100,218 @@ dd {
 .access-denied {
     border-color: #fecaca;
     background: #fff7f7;
+}
+
+.transactions-section {
+    width: min(100%, 960px);
+    border: 1px solid #dce5f2;
+    border-radius: 24px;
+    background: #ffffff;
+    box-shadow: 0 16px 48px rgb(26 41 61 / 10%);
+    padding: clamp(20px, 5vw, 32px);
+}
+
+.section-header,
+.transaction-item,
+.transaction-actions,
+.form-actions {
+    display: flex;
+    align-items: center;
+}
+
+.section-header {
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.section-header h2 {
+    margin: 0;
+    color: #0f172a;
+    font-size: clamp(1.4rem, 4vw, 2rem);
+}
+
+.metric-card {
+    min-width: 180px;
+    border-radius: 18px;
+    background: #f6f9fd;
+    padding: 14px 16px;
+}
+
+.metric-card span {
+    display: block;
+    color: #6b7b91;
+    font-size: 0.8rem;
+}
+
+.metric-card strong {
+    display: block;
+    margin-top: 4px;
+    color: #0f172a;
+    font-size: 1.1rem;
+}
+
+.transaction-form {
+    border: 1px solid #e5edf7;
+    border-radius: 20px;
+    background: #fbfdff;
+    padding: 16px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+label {
+    display: grid;
+    gap: 6px;
+    color: #526173;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+input,
+select {
+    width: 100%;
+    border: 1px solid #cfd9e8;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #172033;
+    font: inherit;
+    padding: 10px 12px;
+}
+
+input:focus,
+select:focus,
+button:focus-visible {
+    outline: 3px solid rgb(35 116 225 / 28%);
+    outline-offset: 2px;
+}
+
+.form-actions {
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+button {
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    padding: 10px 16px;
+}
+
+button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.primary-button {
+    background: #2374e1;
+    color: #ffffff;
+}
+
+.secondary-button {
+    background: #edf4ff;
+    color: #1859ad;
+}
+
+.danger-button {
+    background: #fff1f1;
+    color: #b42318;
+}
+
+.small {
+    padding: 7px 12px;
+    font-size: 0.85rem;
+}
+
+.inline-error,
+.list-state {
+    border-radius: 16px;
+    margin: 16px 0 0;
+    padding: 14px 16px;
+}
+
+.inline-error {
+    background: #fff1f1;
+    color: #b42318;
+}
+
+.list-state {
+    background: #f6f9fd;
+    color: #526173;
+}
+
+.transaction-list {
+    display: grid;
+    gap: 10px;
+    list-style: none;
+    margin: 18px 0 0;
+    padding: 0;
+}
+
+.transaction-item {
+    justify-content: space-between;
+    gap: 14px;
+    border: 1px solid #e5edf7;
+    border-radius: 18px;
+    padding: 14px 16px;
+}
+
+.transaction-item strong,
+.transaction-item span {
+    display: block;
+}
+
+.transaction-item strong {
+    color: #0f172a;
+}
+
+.transaction-item div > span {
+    margin-top: 4px;
+    color: #6b7b91;
+    font-size: 0.88rem;
+}
+
+.transaction-actions {
+    justify-content: flex-end;
+    gap: 8px;
+    text-align: right;
+}
+
+.transaction-actions .income,
+.transaction-actions .expense {
+    font-weight: 800;
+}
+
+.transaction-actions .income {
+    color: #087443;
+}
+
+.transaction-actions .expense {
+    color: #b42318;
+}
+
+@media (max-width: 760px) {
+    .section-header,
+    .transaction-item,
+    .transaction-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .metric-card {
+        min-width: 0;
+    }
 }
 
 @media (max-width: 640px) {

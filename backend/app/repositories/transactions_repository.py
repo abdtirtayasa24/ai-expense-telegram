@@ -84,7 +84,11 @@ class TransactionsRepository(BaseRepository):
         user_id: str,
         updates: dict[str, Any],
     ) -> Row | None:
-        payload = {key: value for key, value in updates.items() if value is not None}
+        payload = {
+            key: value
+            for key, value in updates.items()
+            if value is not None or key == "note"
+        }
         if "amount" in payload and isinstance(payload["amount"], Decimal):
             payload["amount"] = str(payload["amount"])
         if "transaction_date" in payload and isinstance(

@@ -4,6 +4,7 @@ from fastapi import Depends, Header, HTTPException, status
 from jose import JWTError
 
 from app.repositories.base import Row
+from app.repositories.transactions_repository import TransactionsRepository
 from app.repositories.users_repository import UsersRepository
 from app.services.jwt_service import decode_access_token
 
@@ -16,6 +17,10 @@ def get_settings() -> Any:
 
 def get_users_repository() -> UsersRepository:
     return UsersRepository()
+
+
+def get_transactions_repository() -> TransactionsRepository:
+    return TransactionsRepository()
 
 
 async def get_current_user(

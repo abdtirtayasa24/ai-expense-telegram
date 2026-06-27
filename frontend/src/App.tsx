@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 import { type AuthenticatedUser, loginWithTelegramMiniApp } from "./api/auth";
+import { TransactionsPanel } from "./components/TransactionsPanel";
 import { formatRupiah } from "./utils/currency";
 
 type AuthState =
     | { status: "loading" }
-    | { status: "authenticated"; user: AuthenticatedUser }
+    | { status: "authenticated"; token: string; user: AuthenticatedUser }
     | { status: "denied"; message: string };
 
 function getErrorMessage(error: unknown): string {
@@ -33,7 +34,11 @@ export default function App() {
                 const auth = await loginWithTelegramMiniApp();
                 localStorage.setItem("access_token", auth.access_token);
                 if (isMounted) {
-                    setAuthState({ status: "authenticated", user: auth.user });
+                    setAuthState({
+                        status: "authenticated",
+                        token: auth.access_token,
+                        user: auth.user,
+                    });
                 }
             } catch (error) {
                 localStorage.removeItem("access_token");
@@ -79,7 +84,7 @@ export default function App() {
     }
 
     return (
-        <main className="app-shell">
+        <main className="app-shell dashboard-shell">
             <section className="hero-card">
                 <p className="eyebrow">Telegram Mini App</p>
                 <h1>AI Expense Tracker</h1>
@@ -106,6 +111,13 @@ export default function App() {
                     transaksi dan dashboard.
                 </p>
             </section>
+            <TransactionsPanel
+                token={authState.token}
+                onUnauthorized={(message) => {
+                    localStorage.removeItem("access_token");
+                    setAuthState({ status: "denied", message });
+                }}
+            />
         </main>
     );
 }
