@@ -1,10 +1,3 @@
-"""
-Gemini fallback parser for low-confidence rule-based parser results.
-
-Uses Google Gemini API with structured output to extract transaction
-details from Indonesian natural-language messages.
-"""
-
 from datetime import date
 
 from google import genai
@@ -15,18 +8,6 @@ from app.schemas.parser import ParsedTransaction
 
 
 async def parse_gemini_transaction(text: str, today: date) -> ParsedTransaction:
-    """Call Gemini with structured output to parse a transaction message.
-
-    Args:
-        text: The user's raw message in Indonesian.
-        today: The reference date in Asia/Jakarta for resolving relative dates.
-
-    Returns:
-        A ParsedTransaction with ``parser="gemini"``.
-
-    Raises:
-        ValueError: If the Gemini API call fails or returns invalid output.
-    """
     client = genai.Client(api_key=settings.gemini_api_key)
 
     prompt = _build_prompt(text, today)

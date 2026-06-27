@@ -1,7 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.core.defaults import DEFAULT_CURRENCY, DEFAULT_LANGUAGE, DEFAULT_TIMEZONE
-
 
 class Settings(BaseSettings):
     app_env: str = "development"
@@ -21,9 +19,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expires_minutes: int = 10080
 
-    default_language: str = DEFAULT_LANGUAGE
-    default_currency: str = DEFAULT_CURRENCY
-    default_timezone: str = DEFAULT_TIMEZONE
+    default_language: str
+    default_currency: str
+    default_timezone: str
 
     parser_confidence_threshold: float = 0.75
 
