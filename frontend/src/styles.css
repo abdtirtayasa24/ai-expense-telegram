@@ -91,6 +91,11 @@ dd {
     line-height: 1.6;
 }
 
+.access-denied {
+    border-color: #fecaca;
+    background: #fff7f7;
+}
+
 @media (max-width: 640px) {
     .summary-grid {
         grid-template-columns: 1fr;

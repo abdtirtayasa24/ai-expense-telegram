@@ -4,6 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from types import SimpleNamespace
 from typing import Any
 
 from app.repositories.budgets_repository import BudgetsRepository
@@ -150,7 +151,12 @@ class FakeQueryBuilder:
 
 def test_users_repository_create_update_deactivate_reactivate_and_list() -> None:
     client = FakeSupabaseClient()
-    repository = UsersRepository(client)
+    settings = SimpleNamespace(
+        default_language="id",
+        default_currency="IDR",
+        default_timezone="Asia/Jakarta",
+    )
+    repository = UsersRepository(client, app_settings=settings)
 
     user = repository.create_registered_user(
         telegram_user_id=123,

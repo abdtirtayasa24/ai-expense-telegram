@@ -1,12 +1,19 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from app.core.defaults import DEFAULT_CURRENCY, DEFAULT_LANGUAGE, DEFAULT_TIMEZONE
-from app.repositories.base import BaseRepository, Row
+from app.repositories.base import BaseRepository, Row, SupabaseClient
 
 
 class UsersRepository(BaseRepository):
     table_name = "users"
+
+    def __init__(
+        self,
+        client: SupabaseClient | None = None,
+        app_settings: Any | None = None,
+    ) -> None:
+        super().__init__(client)
+        self.app_settings = app_settings
 
     def get_by_id(self, user_id: str) -> Row | None:
         result = self.table().select("*").eq("id", user_id).limit(1).execute()
@@ -30,15 +37,16 @@ class UsersRepository(BaseRepository):
         role: str = "user",
     ) -> Row:
         now = datetime.now(UTC).isoformat()
+        app_settings = self._settings()
         payload: dict[str, Any] = {
             "telegram_user_id": telegram_user_id,
             "telegram_username": telegram_username,
             "role": role,
             "status": "active",
             "onboarding_status": "pending",
-            "language_code": DEFAULT_LANGUAGE,
-            "currency": DEFAULT_CURRENCY,
-            "timezone": DEFAULT_TIMEZONE,
+            "language_code": app_settings.default_language,
+            "currency": app_settings.default_currency,
+            "timezone": app_settings.default_timezone,
             "registered_by_telegram_id": registered_by_telegram_id,
             "registered_at": now,
             "unregistered_at": None,
@@ -120,6 +128,13 @@ class UsersRepository(BaseRepository):
     def list_users(self) -> list[Row]:
         result = self.table().select("*").order("created_at").execute()
         return self.rows(result)
+
+    def _settings(self) -> Any:
+        if self.app_settings is not None:
+            return self.app_settings
+        from app.core.config import settings
+
+        return settings
 
     @staticmethod
     def _without_none(payload: dict[str, Any]) -> dict[str, Any]:

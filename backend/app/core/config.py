@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     jwt_expires_minutes: int = 10080
+    telegram_init_data_max_age_seconds: int = 86400
 
     default_language: str
     default_currency: str
