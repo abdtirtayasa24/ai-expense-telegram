@@ -1,6 +1,10 @@
 # AI Telegram Expense Tracker — Agent Guide
 
-This document is the definitive guide for any AI coding agent (or human contributor) continuing development on this project. Read it first before making changes.
+This document is the definitive guide for any AI coding agent (or human contributor) continuing development on this project. Before working and make any changes, read this AGENTS.md and:
+
+- [README.md](README.md)
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/MVP_IMPLEMENTED.md](docs/MVP_IMPLEMENTED.md)
 
 ## Project Identity
 

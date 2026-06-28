@@ -17,6 +17,10 @@ Users record expenses and income by chatting with a Telegram bot in Indonesian n
 | Auth | Telegram initData HMAC + JWT |
 | Deployment | Docker (backend), Vercel/Netlify (frontend) |
 
+## Architecture
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detail application architecture.
+
 ## Project Structure
 
 ```text
@@ -30,21 +34,37 @@ ai-expense-telegram/
       repositories/     # users, transactions, budgets, insights, conversation_states
       schemas/          # auth, transaction, budget, dashboard, advisor, parser
       services/         # rule_parser, gemini_parser, advisor_service, transaction_categories, jwt_service
-    tests/
-    pyproject.toml
-    Dockerfile
+      main.py
+    tests/              # backend tests
     .env.example
+    Dockerfile
+    pyproject.toml
+  docs/
+    ARCHITECTURE.md
+    DEPLOYMENT.md
+    MVP_IMPLEMENTED.md
   frontend/
     src/
       api/              # auth, transactions, budgets, dashboard, advisor
+      assets/           # app logo
       components/       # DashboardOverview, TransactionsPanel, BudgetPanel, InsightPanel
+      utils/            # helper functions
+      App.tsx
+      main.tsx
+      styles.css
+      vite-env.d.ts
+    .env.example
+    eslint.config.js
+    global.d.ts
+    index.html
     package.json
+    tsconfig.json
     vite.config.ts
-  supabase/migrations/  # 001–007
   scripts/              # smoke_test.py
-  docs/
-    SPEC-1-ai-telegram-expense-tracker.md
-    DEPLOYMENT.md
+  supabase/migrations/  # sql migrations
+  .gitignore
+  AGENTS.md
+  README.md
 ```
 
 ## Local Development
