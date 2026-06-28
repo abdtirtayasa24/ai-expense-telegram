@@ -84,6 +84,7 @@ class TransactionListResponse(BaseModel):
     items: list[TransactionOut]
     limit: int
     offset: int
+    has_next: bool
 
 
 class TransactionDeleteResponse(BaseModel):

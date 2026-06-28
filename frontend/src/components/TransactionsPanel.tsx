@@ -12,6 +12,9 @@ import {
     updateTransaction,
 } from "../api/transactions";
 import { formatRupiah } from "../utils/currency";
+import { EditTransactionModal } from "./EditTransactionModal";
+
+const PAGE_SIZE = 10;
 
 const CATEGORIES: { value: TransactionCategory; label: string }[] = [
     { value: "transportasi", label: "Transportasi" },
@@ -39,6 +42,9 @@ const DEFAULT_FORM: TransactionPayload = {
 
 interface TransactionsPanelProps {
     token: string;
+    isActive: boolean;
+    refreshKey: number;
+    onDataChanged: () => void;
     onUnauthorized: (message: string) => void;
 }
 
@@ -52,22 +58,24 @@ function errorMessage(error: unknown): string {
     return "Transaksi belum bisa dimuat. Coba lagi sebentar.";
 }
 
-function toForm(transaction: Transaction): TransactionPayload {
-    return {
-        type: transaction.type,
-        name: transaction.name,
-        category: transaction.category,
-        amount: transaction.amount,
-        transaction_date: transaction.transaction_date,
-        note: transaction.note ?? "",
-    };
+function categoryLabel(category: string): string {
+    return category.replace(/_/g, " ");
 }
 
-export function TransactionsPanel({ token, onUnauthorized }: TransactionsPanelProps) {
+export function TransactionsPanel({
+    token,
+    isActive,
+    refreshKey,
+    onDataChanged,
+    onUnauthorized,
+}: TransactionsPanelProps) {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [form, setForm] = useState<TransactionPayload>(DEFAULT_FORM);
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+    const [offset, setOffset] = useState(0);
+    const [hasNext, setHasNext] = useState(false);
+    const [lastLoadedRefreshKey, setLastLoadedRefreshKey] = useState<number | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -79,29 +87,60 @@ export function TransactionsPanel({ token, onUnauthorized }: TransactionsPanelPr
         [transactions],
     );
 
-    const loadTransactions = useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            setTransactions(await listTransactions(token));
-        } catch (requestError) {
-            if (axios.isAxiosError(requestError) && requestError.response?.status === 401) {
-                onUnauthorized("Sesi kamu sudah berakhir. Silakan buka ulang Mini App.");
-                return;
+    const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
+
+    const loadTransactions = useCallback(
+        async (targetOffset = offset, loadedRefreshKey = refreshKey) => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const response = await listTransactions(token, {
+                    limit: PAGE_SIZE,
+                    offset: targetOffset,
+                });
+                setTransactions(response.items);
+                setOffset(response.offset);
+                setHasNext(response.has_next);
+                setLastLoadedRefreshKey(loadedRefreshKey);
+            } catch (requestError) {
+                if (
+                    axios.isAxiosError(requestError) &&
+                    requestError.response?.status === 401
+                ) {
+                    onUnauthorized("Sesi kamu sudah berakhir. Silakan buka ulang Mini App.");
+                    return;
+                }
+                setError(errorMessage(requestError));
+            } finally {
+                setIsLoading(false);
             }
-            setError(errorMessage(requestError));
-        } finally {
-            setIsLoading(false);
-        }
-    }, [onUnauthorized, token]);
+        },
+        [offset, onUnauthorized, refreshKey, token],
+    );
 
     useEffect(() => {
-        void loadTransactions();
-    }, [loadTransactions]);
+        if (!isActive) {
+            return;
+        }
+        if (lastLoadedRefreshKey === refreshKey) {
+            return;
+        }
+        void loadTransactions(0, refreshKey);
+    }, [isActive, lastLoadedRefreshKey, loadTransactions, refreshKey]);
 
     function resetForm() {
-        setEditingId(null);
-        setForm(DEFAULT_FORM);
+        setForm({
+            ...DEFAULT_FORM,
+            transaction_date: new Date().toISOString().slice(0, 10),
+        });
+    }
+
+    function handleRequestError(requestError: unknown) {
+        if (axios.isAxiosError(requestError) && requestError.response?.status === 401) {
+            onUnauthorized("Sesi kamu sudah berakhir. Silakan buka ulang Mini App.");
+            return;
+        }
+        setError(errorMessage(requestError));
     }
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -109,20 +148,30 @@ export function TransactionsPanel({ token, onUnauthorized }: TransactionsPanelPr
         setIsSaving(true);
         setError(null);
         try {
-            if (editingId) {
-                const updated = await updateTransaction(token, editingId, form);
-                setTransactions((current) =>
-                    current.map((transaction) =>
-                        transaction.id === updated.id ? updated : transaction,
-                    ),
-                );
-            } else {
-                const created = await createTransaction(token, form);
-                setTransactions((current) => [created, ...current]);
-            }
+            await createTransaction(token, form);
             resetForm();
+            onDataChanged();
+            await loadTransactions(0, refreshKey);
         } catch (requestError) {
-            setError(errorMessage(requestError));
+            handleRequestError(requestError);
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
+    async function handleUpdate(payload: TransactionPayload) {
+        if (editingTransaction === null) {
+            return;
+        }
+        setIsSaving(true);
+        setError(null);
+        try {
+            await updateTransaction(token, editingTransaction.id, payload);
+            setEditingTransaction(null);
+            onDataChanged();
+            await loadTransactions(offset, refreshKey);
+        } catch (requestError) {
+            handleRequestError(requestError);
         } finally {
             setIsSaving(false);
         }
@@ -136,12 +185,22 @@ export function TransactionsPanel({ token, onUnauthorized }: TransactionsPanelPr
         setError(null);
         try {
             await deleteTransaction(token, transactionId);
-            setTransactions((current) =>
-                current.filter((transaction) => transaction.id !== transactionId),
-            );
+            onDataChanged();
+            const targetOffset = transactions.length === 1 && offset > 0
+                ? Math.max(0, offset - PAGE_SIZE)
+                : offset;
+            await loadTransactions(targetOffset, refreshKey);
         } catch (requestError) {
-            setError(errorMessage(requestError));
+            handleRequestError(requestError);
         }
+    }
+
+    async function goToPreviousPage() {
+        await loadTransactions(Math.max(0, offset - PAGE_SIZE), refreshKey);
+    }
+
+    async function goToNextPage() {
+        await loadTransactions(offset + PAGE_SIZE, refreshKey);
     }
 
     return (
@@ -151,8 +210,8 @@ export function TransactionsPanel({ token, onUnauthorized }: TransactionsPanelPr
                     <p className="eyebrow">Transaksi</p>
                     <h2 id="transactions-title">Catatan manual</h2>
                 </div>
-                <div className="metric-card" aria-label="Total pengeluaran terlihat">
-                    <span>Total pengeluaran</span>
+                <div className="metric-card" aria-label="Total pengeluaran di halaman ini">
+                    <span>Pengeluaran halaman ini</span>
                     <strong>{formatRupiah(totalExpense)}</strong>
                 </div>
             </div>
@@ -246,13 +305,8 @@ export function TransactionsPanel({ token, onUnauthorized }: TransactionsPanelPr
                     </label>
                 </div>
                 <div className="form-actions">
-                    {editingId ? (
-                        <button type="button" className="secondary-button" onClick={resetForm}>
-                            Batal
-                        </button>
-                    ) : null}
                     <button className="primary-button" disabled={isSaving} type="submit">
-                        {isSaving ? "Menyimpan..." : editingId ? "Simpan perubahan" : "Tambah transaksi"}
+                        {isSaving ? "Menyimpan..." : "Tambah transaksi"}
                     </button>
                 </div>
             </form>
@@ -268,41 +322,70 @@ export function TransactionsPanel({ token, onUnauthorized }: TransactionsPanelPr
                     Belum ada transaksi. Tambahkan transaksi pertama kamu dari formulir di atas.
                 </div>
             ) : (
-                <ul className="transaction-list" aria-label="Daftar transaksi">
-                    {transactions.map((transaction) => (
-                        <li className="transaction-item" key={transaction.id}>
-                            <div>
-                                <strong>{transaction.name}</strong>
-                                <span>
-                                    {transaction.type === "income" ? "Pemasukan" : "Pengeluaran"} · {transaction.category} · {transaction.transaction_date}
-                                </span>
-                            </div>
-                            <div className="transaction-actions">
-                                <span className={transaction.type === "income" ? "income" : "expense"}>
-                                    {formatRupiah(transaction.amount)}
-                                </span>
-                                <button
-                                    type="button"
-                                    className="secondary-button small"
-                                    onClick={() => {
-                                        setEditingId(transaction.id);
-                                        setForm(toForm(transaction));
-                                    }}
-                                >
-                                    Edit
-                                </button>
-                                <button
-                                    type="button"
-                                    className="danger-button small"
-                                    onClick={() => void handleDelete(transaction.id)}
-                                >
-                                    Hapus
-                                </button>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
+                <>
+                    <ul className="transaction-list compact" aria-label="Daftar transaksi">
+                        {transactions.map((transaction) => (
+                            <li className="transaction-item" key={transaction.id}>
+                                <div className="transaction-main">
+                                    <strong>{transaction.name}</strong>
+                                    <span className="transaction-meta">
+                                        {transaction.type === "income" ? "Pemasukan" : "Pengeluaran"} · {categoryLabel(transaction.category)} · {transaction.transaction_date}
+                                    </span>
+                                </div>
+                                <div className="transaction-actions">
+                                    <span className={transaction.type === "income" ? "income" : "expense"}>
+                                        {transaction.type === "income" ? "+" : "-"}
+                                        {formatRupiah(transaction.amount)}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className="secondary-button small"
+                                        onClick={() => setEditingTransaction(transaction)}
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="danger-button small"
+                                        onClick={() => void handleDelete(transaction.id)}
+                                    >
+                                        Hapus
+                                    </button>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                    <nav className="pagination-controls" aria-label="Paginasi transaksi">
+                        <button
+                            type="button"
+                            className="secondary-button small"
+                            disabled={offset === 0 || isLoading}
+                            onClick={() => void goToPreviousPage()}
+                        >
+                            Sebelumnya
+                        </button>
+                        <span>Halaman {currentPage}</span>
+                        <button
+                            type="button"
+                            className="secondary-button small"
+                            disabled={!hasNext || isLoading}
+                            onClick={() => void goToNextPage()}
+                        >
+                            Berikutnya
+                        </button>
+                    </nav>
+                </>
             )}
+
+            {editingTransaction ? (
+                <EditTransactionModal
+                    transaction={editingTransaction}
+                    categories={CATEGORIES}
+                    isSaving={isSaving}
+                    onClose={() => setEditingTransaction(null)}
+                    onSave={(payload) => void handleUpdate(payload)}
+                />
+            ) : null}
         </section>
     );
 }

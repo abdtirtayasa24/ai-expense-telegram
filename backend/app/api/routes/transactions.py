@@ -86,13 +86,14 @@ async def list_transactions(
         next_month_start=next_month_start,
         transaction_type=type,
         category=category,
-        limit=limit,
+        limit=limit + 1,
         offset=offset,
     )
     return TransactionListResponse(
-        items=[transaction_out(row) for row in rows],
+        items=[transaction_out(row) for row in rows[:limit]],
         limit=limit,
         offset=offset,
+        has_next=len(rows) > limit,
     )
 
 

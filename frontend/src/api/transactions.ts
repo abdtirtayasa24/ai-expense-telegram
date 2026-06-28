@@ -46,6 +46,12 @@ export interface TransactionListResponse {
     items: Transaction[];
     limit: number;
     offset: number;
+    has_next: boolean;
+}
+
+interface ListTransactionsParams {
+    limit?: number;
+    offset?: number;
 }
 
 function authHeaders(token: string) {
@@ -54,11 +60,15 @@ function authHeaders(token: string) {
     };
 }
 
-export async function listTransactions(token: string): Promise<Transaction[]> {
+export async function listTransactions(
+    token: string,
+    params: ListTransactionsParams = {},
+): Promise<TransactionListResponse> {
     const response = await axios.get<TransactionListResponse>(`${API_BASE_URL}/transactions`, {
         headers: authHeaders(token),
+        params,
     });
-    return response.data.items;
+    return response.data;
 }
 
 export async function createTransaction(

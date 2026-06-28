@@ -73,7 +73,7 @@ frontend/src/
   api/                       ← typed Axios helpers for each domain
   components/                ← one file per component (flat, no folders yet)
   utils/                     ← currency.ts
-  App.tsx                    ← auth bootstrap + layout
+  App.tsx                    ← auth bootstrap + page navigation/cache
   main.tsx
   styles.css                 ← all global styles
 ```
@@ -81,6 +81,7 @@ frontend/src/
 **Rules:**
 - Components are flat files in `components/`, not nested folders (until a component needs 3+ sibling files).
 - Data fetching lives in components via `useEffect`/`useCallback`.
+- Visited Mini App pages may stay mounted for lightweight cache; use explicit refresh keys when related data becomes stale.
 - Token from local storage, sent via `Authorization: Bearer <jwt>` header.
 - All API calls go through typed helpers in `src/api/`.
 - No UI library — use existing CSS classes or add new ones to `styles.css`.

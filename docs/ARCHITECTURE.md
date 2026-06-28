@@ -318,7 +318,8 @@ participant "React Mini App" as App
 participant "FastAPI REST API" as API
 database "Supabase PostgreSQL" as DB
 
-User -> App : View dashboard / manage data
+User -> App : Open Mini App
+App -> App : show DashboardOverview + page menu
 App -> API : Authorization: Bearer <jwt>
 API -> API : validate JWT and current user state
 API -> DB : scope every query by user_id
@@ -326,14 +327,18 @@ API -> DB : scope every query by user_id
 alt dashboard summary/categories/trend/recent
   API -> DB : paginate transactions for aggregation
   API -> App : monthly summary, category breakdown, trend, recent items
-else transaction CRUD
-  API -> DB : list/create/update/delete transactions by user_id
-  API -> App : transaction response
+else transaction page
+  App -> API : GET /transactions?limit=10&offset=n
+  API -> DB : list transactions by user_id, limit+1 for has_next
+  API -> App : transaction page items + pagination metadata
+  App -> App : edit transaction in modal dialog
 else budget CRUD
   API -> DB : list/create/update/delete budgets by user_id
   API -> DB : paginate expense transactions for actuals
   API -> App : budget progress with actual/remaining/percent_used
 end
+
+App -> App : keep visited pages mounted and refresh stale data only when affected
 @enduml
 ```
 
@@ -527,7 +532,7 @@ API -> Cron : { ok: true, notified: n }
 GET    /health
 POST   /auth/telegram-mini-app
 GET    /auth/me
-GET    /transactions
+GET    /transactions?limit=<1-100>&offset=<0+>
 POST   /transactions
 PATCH  /transactions/{transaction_id}
 DELETE /transactions/{transaction_id}
@@ -573,17 +578,21 @@ app/integrations/*.py              Supabase and Telegram HTTP clients
 Notes:
 - Diagrams use logical components such as "Transaction Service" and "Dashboard API". In code, some logic currently lives directly in route or bot modules rather than separate service classes.
 - All protected user data access must be scoped by `user_id`.
+- `GET /transactions` supports `limit` and `offset`, and returns `has_next` so the frontend can paginate without a count query.
 - Long-running Telegram update handling is delegated via FastAPI `BackgroundTasks`; the webhook returns `{ "ok": true }` quickly.
 
 ### Frontend Module Map
 
 ```text
-src/App.tsx                        Telegram auth bootstrap and dashboard shell
+src/App.tsx                        Telegram auth bootstrap, page navigation, keep-alive cache
 src/api/*.ts                       Typed Axios API helpers
 src/components/DashboardOverview.tsx Summary, categories, trend, recent transactions
+src/components/PageMenu.tsx        Dashboard menu for Budget, AI Advisor, Transaksi pages
+src/components/PageHeader.tsx      Shared page title/back navigation
 src/components/BudgetPanel.tsx     Budget CRUD and progress display
 src/components/InsightPanel.tsx    Advisor insights and chat UI
-src/components/TransactionsPanel.tsx Transaction CRUD UI
+src/components/TransactionsPanel.tsx Paginated transaction CRUD UI
+src/components/EditTransactionModal.tsx Modal edit form for transactions
 src/utils/currency.ts              IDR formatting helper
 src/styles.css                     Global plain CSS styling
 ```

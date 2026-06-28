@@ -16,6 +16,8 @@ import { formatRupiah } from "../utils/currency";
 interface DashboardOverviewProps {
     token: string;
     firstName: string | null;
+    isActive: boolean;
+    refreshKey: number;
     onUnauthorized: (message: string) => void;
 }
 
@@ -51,11 +53,14 @@ function categoryLabel(category: string): string {
 export function DashboardOverview({
     token,
     firstName,
+    isActive,
+    refreshKey,
     onUnauthorized,
 }: DashboardOverviewProps) {
     const [data, setData] = useState<DashboardData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [lastLoadedRefreshKey, setLastLoadedRefreshKey] = useState<number | null>(null);
 
     const maxTrendAmount = useMemo(() => {
         if (!data?.trend.length) {
@@ -77,6 +82,7 @@ export function DashboardOverview({
                 getRecentTransactions(token),
             ]);
             setData({ summary, categories, trend, recentTransactions });
+            setLastLoadedRefreshKey(refreshKey);
         } catch (requestError) {
             if (axios.isAxiosError(requestError) && requestError.response?.status === 401) {
                 onUnauthorized("Sesi kamu sudah berakhir. Silakan buka ulang Mini App.");
@@ -86,11 +92,17 @@ export function DashboardOverview({
         } finally {
             setIsLoading(false);
         }
-    }, [onUnauthorized, token]);
+    }, [onUnauthorized, refreshKey, token]);
 
     useEffect(() => {
+        if (!isActive) {
+            return;
+        }
+        if (lastLoadedRefreshKey === refreshKey) {
+            return;
+        }
         void loadDashboard();
-    }, [loadDashboard]);
+    }, [isActive, lastLoadedRefreshKey, loadDashboard, refreshKey]);
 
     if (isLoading) {
         return (

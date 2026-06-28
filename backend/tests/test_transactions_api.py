@@ -115,7 +115,27 @@ def test_list_transactions_returns_current_user_data_with_filters() -> None:
         ],
         "limit": 10,
         "offset": 0,
+        "has_next": False,
     }
+
+
+def test_list_transactions_returns_has_next_when_more_rows_exist() -> None:
+    repository = TransactionsRepository(FakeSupabaseClient())
+    for index in range(11):
+        seed_transaction(repository, name=f"Transaksi {index}")
+    client = transaction_client(repository)
+
+    try:
+        response = client.get("/transactions?limit=10&offset=0")
+    finally:
+        clear_overrides()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["items"]) == 10
+    assert body["limit"] == 10
+    assert body["offset"] == 0
+    assert body["has_next"] is True
 
 
 def test_create_transaction_sets_manual_source_and_parser() -> None:

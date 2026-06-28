@@ -52,7 +52,7 @@ ai-expense-telegram/
     src/
       api/              # auth, transactions, budgets, dashboard, advisor
       assets/           # app logo
-      components/       # DashboardOverview, TransactionsPanel, BudgetPanel, InsightPanel
+      components/       # dashboard, page navigation, budget, advisor, transaction panels/modals
       utils/            # helper functions
       App.tsx
       main.tsx

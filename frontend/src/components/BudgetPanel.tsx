@@ -28,6 +28,9 @@ const CATEGORIES: { value: TransactionCategory; label: string }[] = [
 
 interface BudgetPanelProps {
     token: string;
+    isActive: boolean;
+    refreshKey: number;
+    onDataChanged: () => void;
     onUnauthorized: (message: string) => void;
 }
 
@@ -50,11 +53,18 @@ function categoryLabel(category: string): string {
     return category.replace(/_/g, " ");
 }
 
-export function BudgetPanel({ token, onUnauthorized }: BudgetPanelProps) {
+export function BudgetPanel({
+    token,
+    isActive,
+    refreshKey,
+    onDataChanged,
+    onUnauthorized,
+}: BudgetPanelProps) {
     const [budgets, setBudgets] = useState<Budget[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [lastLoadedRefreshKey, setLastLoadedRefreshKey] = useState<number | null>(null);
     const [form, setForm] = useState({
         category: "transportasi" as TransactionCategory,
         monthly_limit: 0,
@@ -66,6 +76,7 @@ export function BudgetPanel({ token, onUnauthorized }: BudgetPanelProps) {
         setError(null);
         try {
             setBudgets(await listBudgets(token));
+            setLastLoadedRefreshKey(refreshKey);
         } catch (requestError) {
             if (axios.isAxiosError(requestError) && requestError.response?.status === 401) {
                 onUnauthorized("Sesi kamu sudah berakhir.");
@@ -75,11 +86,17 @@ export function BudgetPanel({ token, onUnauthorized }: BudgetPanelProps) {
         } finally {
             setIsLoading(false);
         }
-    }, [onUnauthorized, token]);
+    }, [onUnauthorized, refreshKey, token]);
 
     useEffect(() => {
+        if (!isActive) {
+            return;
+        }
+        if (lastLoadedRefreshKey === refreshKey) {
+            return;
+        }
         void loadBudgets();
-    }, [loadBudgets]);
+    }, [isActive, lastLoadedRefreshKey, loadBudgets, refreshKey]);
 
     function resetForm() {
         setEditingId(null);
@@ -98,12 +115,14 @@ export function BudgetPanel({ token, onUnauthorized }: BudgetPanelProps) {
                 setBudgets((current) =>
                     current.map((b) => (b.id === updated.id ? updated : b)),
                 );
+                onDataChanged();
             } else {
                 const created = await createBudget(token, {
                     ...form,
                     month: currentMonth(),
                 });
                 setBudgets((current) => [created, ...current]);
+                onDataChanged();
             }
             resetForm();
         } catch (requestError) {
@@ -120,6 +139,7 @@ export function BudgetPanel({ token, onUnauthorized }: BudgetPanelProps) {
         try {
             await deleteBudget(token, budgetId);
             setBudgets((current) => current.filter((b) => b.id !== budgetId));
+            onDataChanged();
         } catch (requestError) {
             setError(errorMessage(requestError));
         }

@@ -9,6 +9,8 @@ import {
 
 interface InsightPanelProps {
     token: string;
+    isActive: boolean;
+    refreshKey: number;
     onUnauthorized: (message: string) => void;
 }
 
@@ -22,7 +24,12 @@ function errorMessage(error: unknown): string {
     return "Insight belum bisa dimuat. Coba lagi sebentar.";
 }
 
-export function InsightPanel({ token, onUnauthorized }: InsightPanelProps) {
+export function InsightPanel({
+    token,
+    isActive,
+    refreshKey,
+    onUnauthorized,
+}: InsightPanelProps) {
     const [insight, setInsight] = useState<InsightsResponse | null>(null);
     const [chatMessage, setChatMessage] = useState("");
     const [chatHistory, setChatHistory] = useState<
@@ -31,12 +38,14 @@ export function InsightPanel({ token, onUnauthorized }: InsightPanelProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [lastLoadedRefreshKey, setLastLoadedRefreshKey] = useState<number | null>(null);
 
     const loadInsight = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
             setInsight(await getInsights(token));
+            setLastLoadedRefreshKey(refreshKey);
         } catch (requestError) {
             if (
                 axios.isAxiosError(requestError) &&
@@ -49,11 +58,17 @@ export function InsightPanel({ token, onUnauthorized }: InsightPanelProps) {
         } finally {
             setIsLoading(false);
         }
-    }, [onUnauthorized, token]);
+    }, [onUnauthorized, refreshKey, token]);
 
     useEffect(() => {
+        if (!isActive) {
+            return;
+        }
+        if (lastLoadedRefreshKey === refreshKey) {
+            return;
+        }
         void loadInsight();
-    }, [loadInsight]);
+    }, [isActive, lastLoadedRefreshKey, loadInsight, refreshKey]);
 
     async function handleChatSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
