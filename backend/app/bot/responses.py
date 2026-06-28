@@ -44,6 +44,20 @@ ADVISOR_MODE_EXPIRED = (
 ADVISOR_UNAVAILABLE = "Layanan advisor sedang tidak tersedia. Coba lagi nanti."
 
 
+def user_not_active_with_contact(
+    telegram_user_id: int,
+    admin_contact_telegram: str,
+    admin_contact_whatsapp: str,
+) -> str:
+    return (
+        "Maaf, akun kamu belum terdaftar atau sudah dinonaktifkan.\n\n"
+        f"Telegram ID kamu: {telegram_user_id}\n\n"
+        "Silakan hubungi administrator untuk mendaftarkan akun kamu:\n"
+        f"Telegram: {admin_contact_telegram}\n"
+        f"WhatsApp: {admin_contact_whatsapp}"
+    )
+
+
 def onboarding_completed(first_name: str) -> str:
     return (
         f"Oke {first_name}, profil kamu sudah lengkap.\n"

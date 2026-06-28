@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 import { type AuthenticatedUser, loginWithTelegramMiniApp } from "./api/auth";
+import logoUrl from "./assets/logo.png";
 import { DashboardOverview } from "./components/DashboardOverview";
 import { BudgetPanel } from "./components/BudgetPanel";
 import { InsightPanel } from "./components/InsightPanel";
@@ -11,6 +12,18 @@ type AuthState =
     | { status: "loading" }
     | { status: "authenticated"; token: string; user: AuthenticatedUser }
     | { status: "denied"; message: string };
+
+function BrandHeader({ compact = false }: { compact?: boolean }) {
+    return (
+        <div className={compact ? "brand-header compact" : "brand-header"}>
+            <img src={logoUrl} alt="The Tirtayasa" className="brand-logo" />
+            <div>
+                <p className="brand-name">The Tirtayasa</p>
+                <p className="brand-tagline">Your AI Expense Tracker</p>
+            </div>
+        </div>
+    );
+}
 
 function getErrorMessage(error: unknown): string {
     if (axios.isAxiosError(error)) {
@@ -61,6 +74,7 @@ export default function App() {
         return (
             <main className="app-shell">
                 <section className="hero-card" aria-busy="true">
+                    <BrandHeader />
                     <p className="eyebrow">Telegram Mini App</p>
                     <h1>Memuat...</h1>
                     <p className="description">Sedang memvalidasi akses Telegram kamu.</p>
@@ -73,6 +87,7 @@ export default function App() {
         return (
             <main className="app-shell">
                 <section className="hero-card access-denied" role="alert">
+                    <BrandHeader />
                     <p className="eyebrow">Akses ditolak</p>
                     <h1>Belum bisa masuk</h1>
                     <p className="description">{authState.message}</p>
@@ -87,6 +102,9 @@ export default function App() {
 
     return (
         <main className="app-shell dashboard-shell">
+            <header className="dashboard-brand" aria-label="The Tirtayasa">
+                <BrandHeader compact />
+            </header>
             <DashboardOverview
                 token={authState.token}
                 firstName={authState.user.first_name}

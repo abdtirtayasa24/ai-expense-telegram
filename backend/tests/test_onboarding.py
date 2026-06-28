@@ -130,6 +130,8 @@ async def test_missing_or_inactive_users_are_rejected() -> None:
         telegram_client=telegram_client,
         transactions_repository=FakeTransactionsRepository(),
         parser_confidence_threshold=0.75,
+        admin_contact_telegram="@admin",
+        admin_contact_whatsapp="08123",
     )
     inactive_allowed = await handle_registered_user_message(
         text="Halo",
@@ -139,13 +141,15 @@ async def test_missing_or_inactive_users_are_rejected() -> None:
         telegram_client=telegram_client,
         transactions_repository=FakeTransactionsRepository(),
         parser_confidence_threshold=0.75,
+        admin_contact_telegram="@admin",
+        admin_contact_whatsapp="08123",
     )
 
     assert missing_allowed is False
     assert inactive_allowed is False
     assert telegram_client.messages == [
-        (1234, responses.USER_NOT_ACTIVE),
-        (1234, responses.USER_NOT_ACTIVE),
+        (1234, responses.user_not_active_with_contact(111, "@admin", "08123")),
+        (1234, responses.user_not_active_with_contact(222, "@admin", "08123")),
     ]
 
 

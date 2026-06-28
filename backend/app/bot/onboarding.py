@@ -34,10 +34,19 @@ async def handle_registered_user_message(
     gemini_model: str | None = None,
     advisor_mode_timeout_minutes: int = 15,
     advisor_chat_history_limit: int = 60,
+    admin_contact_telegram: str = "",
+    admin_contact_whatsapp: str = "",
 ) -> bool:
     user = users_repository.get_by_telegram_user_id(telegram_user_id)
     if user is None or user.get("status") != "active":
-        await telegram_client.send_message(chat_id, responses.USER_NOT_ACTIVE)
+        await telegram_client.send_message(
+            chat_id,
+            responses.user_not_active_with_contact(
+                telegram_user_id,
+                admin_contact_telegram,
+                admin_contact_whatsapp,
+            ),
+        )
         return False
 
     onboarding_status = user.get("onboarding_status")

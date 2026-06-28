@@ -112,6 +112,8 @@ async def telegram_webhook(
             15,
         ),
         advisor_chat_history_limit=getattr(settings, "advisor_chat_history_limit", 60),
+        admin_contact_telegram=getattr(settings, "admin_contact_telegram", ""),
+        admin_contact_whatsapp=getattr(settings, "admin_contact_whatsapp", ""),
     )
     return TelegramWebhookResponse(ok=True)
 
@@ -132,6 +134,8 @@ async def process_telegram_message(
     gemini_model: str | None = None,
     advisor_mode_timeout_minutes: int = 15,
     advisor_chat_history_limit: int = 60,
+    admin_contact_telegram: str = "",
+    admin_contact_whatsapp: str = "",
 ) -> None:
     try:
         handled = await handle_admin_command(
@@ -159,6 +163,8 @@ async def process_telegram_message(
             gemini_model=gemini_model,
             advisor_mode_timeout_minutes=advisor_mode_timeout_minutes,
             advisor_chat_history_limit=advisor_chat_history_limit,
+            admin_contact_telegram=admin_contact_telegram,
+            admin_contact_whatsapp=admin_contact_whatsapp,
         )
     except Exception:
         logger.exception("Failed to process Telegram webhook update.")

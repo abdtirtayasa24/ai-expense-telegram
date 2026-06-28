@@ -41,6 +41,53 @@ body {
     padding: clamp(24px, 6vw, 48px);
 }
 
+.brand-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+}
+
+.brand-header.compact {
+    margin-bottom: 0;
+}
+
+.brand-logo {
+    width: 56px;
+    height: 56px;
+    flex: 0 0 auto;
+    border-radius: 16px;
+    object-fit: cover;
+}
+
+.brand-name,
+.brand-tagline {
+    margin: 0;
+}
+
+.brand-name {
+    color: #0f172a;
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.brand-tagline {
+    margin-top: 3px;
+    color: #526173;
+    font-size: 0.9rem;
+    line-height: 1.35;
+}
+
+.dashboard-brand {
+    width: min(100%, 960px);
+    border: 1px solid #dce5f2;
+    border-radius: 22px;
+    background: #ffffff;
+    box-shadow: 0 12px 36px rgb(26 41 61 / 8%);
+    padding: 16px 20px;
+}
+
 .eyebrow {
     margin: 0 0 12px;
     color: #2374e1;

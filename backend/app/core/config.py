@@ -8,6 +8,8 @@ class Settings(BaseSettings):
 
     telegram_bot_token: str
     admin_telegram_id: int
+    admin_contact_telegram: str = ""
+    admin_contact_whatsapp: str = ""
 
     supabase_url: str
     supabase_service_role_key: str
