@@ -1,8 +1,12 @@
 from typing import Any, Protocol
 
 from app.bot import responses
+from app.bot.advisor import handle_advisor_mode_message
 from app.bot.transactions import TransactionCreator, handle_transaction_message
+from app.repositories.advisor_chat_repository import AdvisorChatRepository
 from app.repositories.base import Row
+from app.repositories.budgets_repository import BudgetsRepository
+from app.repositories.conversation_states_repository import ConversationStatesRepository
 from app.repositories.users_repository import UsersRepository
 
 
@@ -23,6 +27,13 @@ async def handle_registered_user_message(
     telegram_client: TelegramMessageSender,
     transactions_repository: TransactionCreator,
     parser_confidence_threshold: float,
+    budgets_repository: BudgetsRepository | None = None,
+    conversation_states_repository: ConversationStatesRepository | None = None,
+    advisor_chat_repository: AdvisorChatRepository | None = None,
+    gemini_api_key: str | None = None,
+    gemini_model: str | None = None,
+    advisor_mode_timeout_minutes: int = 15,
+    advisor_chat_history_limit: int = 60,
 ) -> bool:
     user = users_repository.get_by_telegram_user_id(telegram_user_id)
     if user is None or user.get("status") != "active":
@@ -31,6 +42,30 @@ async def handle_registered_user_message(
 
     onboarding_status = user.get("onboarding_status")
     if onboarding_status == "completed":
+        if (
+            budgets_repository is not None
+            and conversation_states_repository is not None
+            and advisor_chat_repository is not None
+            and gemini_api_key is not None
+            and gemini_model is not None
+        ):
+            advisor_handled = await handle_advisor_mode_message(
+                text=text,
+                user=user,
+                chat_id=chat_id,
+                telegram_client=telegram_client,
+                transactions_repository=transactions_repository,  # type: ignore[arg-type]
+                budgets_repository=budgets_repository,
+                conversation_states_repository=conversation_states_repository,
+                advisor_chat_repository=advisor_chat_repository,
+                gemini_api_key=gemini_api_key,
+                gemini_model=gemini_model,
+                timeout_minutes=advisor_mode_timeout_minutes,
+                history_limit=advisor_chat_history_limit,
+            )
+            if advisor_handled:
+                return True
+
         return await handle_transaction_message(
             text=text,
             user=user,

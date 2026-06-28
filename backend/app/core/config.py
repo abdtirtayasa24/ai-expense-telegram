@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     default_timezone: str
 
     parser_confidence_threshold: float = 0.75
+    advisor_mode_timeout_minutes: int = 15
+    advisor_chat_history_limit: int = 60
+    cron_secret: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env")
 

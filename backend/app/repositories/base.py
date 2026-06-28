@@ -33,8 +33,14 @@ class QueryBuilder(Protocol):
     def execute(self) -> QueryResult: ...
 
 
+class RpcBuilder(Protocol):
+    def execute(self) -> QueryResult: ...
+
+
 class SupabaseClient(Protocol):
     def table(self, table_name: str) -> QueryBuilder: ...
+
+    def rpc(self, function_name: str, params: Payload) -> RpcBuilder: ...
 
 
 class BaseRepository:

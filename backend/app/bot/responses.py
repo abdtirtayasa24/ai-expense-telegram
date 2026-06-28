@@ -23,6 +23,25 @@ PARSER_CLARIFICATION = (
     "Maaf, aku belum yakin mencatat transaksi ini. Bisa tulis ulang dengan "
     "format seperti: Bayar parkir 5000?"
 )
+ADVISOR_MODE_ACTIVE = (
+    "Mode AI Advisor aktif. Kamu bisa tanya tentang cashflow, pengeluaran, "
+    "budget, atau kebiasaan belanja kamu.\n\n"
+    "Untuk kembali mencatat transaksi, ketik /transaction."
+)
+TRANSACTION_MODE_ACTIVE = (
+    "Mode transaksi aktif kembali. Sekarang kamu bisa mencatat pemasukan atau "
+    "pengeluaran seperti biasa."
+)
+ADVISOR_MODE_TIMEOUT_NOTICE = (
+    "Mode AI Advisor sudah berakhir karena tidak aktif. Mode transaksi aktif "
+    "kembali."
+)
+ADVISOR_MODE_EXPIRED = (
+    "Mode AI Advisor sudah berakhir karena tidak aktif. Mode transaksi aktif "
+    "kembali. Kalau ingin bertanya ke advisor lagi, ketik /advisor. Kalau ingin "
+    "mencatat transaksi, silakan kirim ulang transaksinya."
+)
+ADVISOR_UNAVAILABLE = "Layanan advisor sedang tidak tersedia. Coba lagi nanti."
 
 
 def onboarding_completed(first_name: str) -> str:

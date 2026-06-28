@@ -28,10 +28,45 @@ class FakeSupabaseClient:
         self.tables.setdefault(table_name, [])
         return FakeQueryBuilder(self, table_name)
 
+    def rpc(self, function_name: str, params: dict[str, Any]) -> FakeRpcBuilder:
+        return FakeRpcBuilder(self, function_name, params)
+
     def make_id(self) -> str:
         value = f"id-{self.next_id}"
         self.next_id += 1
         return value
+
+
+class FakeRpcBuilder:
+    def __init__(
+        self,
+        client: FakeSupabaseClient,
+        function_name: str,
+        params: dict[str, Any],
+    ) -> None:
+        self.client = client
+        self.function_name = function_name
+        self.params = params
+
+    def execute(self) -> FakeResult:
+        if self.function_name != "claim_expired_conversation_states":
+            raise AssertionError(f"Unsupported RPC: {self.function_name}")
+
+        state = self.params["p_state"]
+        limit = self.params.get("p_limit", 100)
+        now = datetime.now(UTC).isoformat()
+        rows = [
+            row
+            for row in self.client.tables.get("conversation_states", [])
+            if row.get("state") == state and row.get("expires_at") < now
+        ]
+        rows.sort(key=lambda row: row.get("expires_at"))
+        claimed = rows[:limit]
+        for row in claimed:
+            payload = dict(row.get("payload") or {})
+            payload["timeout_claimed_at"] = now
+            row["payload"] = payload
+        return FakeResult([deepcopy(row) for row in claimed])
 
 
 class FakeQueryBuilder:
@@ -91,6 +126,7 @@ class FakeQueryBuilder:
         if self.operation == "insert":
             row = deepcopy(self.payload)
             row.setdefault("id", self.client.make_id())
+            row.setdefault("created_at", datetime.now(UTC).isoformat())
             self.client.tables[self.table_name].append(row)
             return FakeResult([deepcopy(row)])
 

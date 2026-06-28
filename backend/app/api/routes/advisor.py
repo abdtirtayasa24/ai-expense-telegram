@@ -3,19 +3,21 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.dependencies import (
+    get_advisor_chat_repository,
     get_budgets_repository,
     get_current_user,
     get_settings,
     get_transactions_repository,
 )
+from app.repositories.advisor_chat_repository import AdvisorChatRepository
 from app.repositories.base import Row
 from app.repositories.budgets_repository import BudgetsRepository
 from app.repositories.insights_repository import InsightsRepository
 from app.repositories.transactions_repository import TransactionsRepository
 from app.schemas.advisor import ChatRequest, ChatResponse, InsightsResponse
+from app.services.advisor_chat_service import answer_advisor_question
 from app.services.advisor_service import (
     build_advisor_context,
-    generate_chat_answer,
     generate_insights,
 )
 
@@ -81,18 +83,22 @@ async def advisor_chat(
         BudgetsRepository,
         Depends(get_budgets_repository),
     ],
+    advisor_chat_repository: Annotated[
+        AdvisorChatRepository,
+        Depends(get_advisor_chat_repository),
+    ],
 ) -> ChatResponse:
-    context = build_advisor_context(
-        current_user["id"],
-        transactions_repository,
-        budgets_repository,
-    )
     try:
-        answer = await generate_chat_answer(
-            context,
-            payload.message,
-            settings.gemini_api_key,
-            settings.gemini_model,
+        answer = await answer_advisor_question(
+            user_id=current_user["id"],
+            message=payload.message,
+            source="mini_app",
+            transactions_repository=transactions_repository,
+            budgets_repository=budgets_repository,
+            advisor_chat_repository=advisor_chat_repository,
+            api_key=settings.gemini_api_key,
+            model=settings.gemini_model,
+            history_limit=settings.advisor_chat_history_limit,
         )
     except Exception:
         raise HTTPException(

@@ -1,7 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import advisor, auth, budgets, dashboard, health, transactions
+from app.api.routes import (
+    advisor,
+    auth,
+    budgets,
+    dashboard,
+    health,
+    internal,
+    transactions,
+)
 from app.bot.webhook import router as telegram_webhook_router
 from app.core.config import settings
 
@@ -26,4 +34,5 @@ app.include_router(transactions.router, prefix="/transactions", tags=["transacti
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 app.include_router(budgets.router, prefix="/budgets", tags=["budgets"])
 app.include_router(advisor.router, prefix="/advisor", tags=["advisor"])
+app.include_router(internal.router, prefix="/internal", tags=["internal"])
 app.include_router(telegram_webhook_router, prefix="/webhooks", tags=["telegram"])

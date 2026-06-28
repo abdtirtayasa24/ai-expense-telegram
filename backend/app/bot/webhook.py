@@ -7,6 +7,9 @@ from pydantic import BaseModel
 from app.bot.commands import handle_admin_command
 from app.bot.onboarding import handle_registered_user_message
 from app.integrations.telegram_client import TelegramClient
+from app.repositories.advisor_chat_repository import AdvisorChatRepository
+from app.repositories.budgets_repository import BudgetsRepository
+from app.repositories.conversation_states_repository import ConversationStatesRepository
 from app.repositories.transactions_repository import TransactionsRepository
 from app.repositories.users_repository import UsersRepository
 
@@ -32,6 +35,18 @@ def get_transactions_repository() -> TransactionsRepository:
     return TransactionsRepository()
 
 
+def get_budgets_repository() -> BudgetsRepository:
+    return BudgetsRepository()
+
+
+def get_conversation_states_repository() -> ConversationStatesRepository:
+    return ConversationStatesRepository()
+
+
+def get_advisor_chat_repository() -> AdvisorChatRepository:
+    return AdvisorChatRepository()
+
+
 def get_telegram_client(
     settings: Annotated[Any, Depends(get_settings)],
 ) -> TelegramClient:
@@ -47,6 +62,15 @@ async def telegram_webhook(
     transactions_repository: Annotated[
         TransactionsRepository,
         Depends(get_transactions_repository),
+    ],
+    budgets_repository: Annotated[BudgetsRepository, Depends(get_budgets_repository)],
+    conversation_states_repository: Annotated[
+        ConversationStatesRepository,
+        Depends(get_conversation_states_repository),
+    ],
+    advisor_chat_repository: Annotated[
+        AdvisorChatRepository,
+        Depends(get_advisor_chat_repository),
     ],
     telegram_client: Annotated[TelegramClient, Depends(get_telegram_client)],
 ) -> TelegramWebhookResponse:
@@ -77,6 +101,17 @@ async def telegram_webhook(
         transactions_repository=transactions_repository,
         telegram_client=telegram_client,
         parser_confidence_threshold=settings.parser_confidence_threshold,
+        budgets_repository=budgets_repository,
+        conversation_states_repository=conversation_states_repository,
+        advisor_chat_repository=advisor_chat_repository,
+        gemini_api_key=getattr(settings, "gemini_api_key", None),
+        gemini_model=getattr(settings, "gemini_model", None),
+        advisor_mode_timeout_minutes=getattr(
+            settings,
+            "advisor_mode_timeout_minutes",
+            15,
+        ),
+        advisor_chat_history_limit=getattr(settings, "advisor_chat_history_limit", 60),
     )
     return TelegramWebhookResponse(ok=True)
 
@@ -90,6 +125,13 @@ async def process_telegram_message(
     transactions_repository: TransactionsRepository,
     telegram_client: TelegramClient,
     parser_confidence_threshold: float,
+    budgets_repository: BudgetsRepository | None = None,
+    conversation_states_repository: ConversationStatesRepository | None = None,
+    advisor_chat_repository: AdvisorChatRepository | None = None,
+    gemini_api_key: str | None = None,
+    gemini_model: str | None = None,
+    advisor_mode_timeout_minutes: int = 15,
+    advisor_chat_history_limit: int = 60,
 ) -> None:
     try:
         handled = await handle_admin_command(
@@ -110,6 +152,13 @@ async def process_telegram_message(
             transactions_repository=transactions_repository,
             telegram_client=telegram_client,
             parser_confidence_threshold=parser_confidence_threshold,
+            budgets_repository=budgets_repository,
+            conversation_states_repository=conversation_states_repository,
+            advisor_chat_repository=advisor_chat_repository,
+            gemini_api_key=gemini_api_key,
+            gemini_model=gemini_model,
+            advisor_mode_timeout_minutes=advisor_mode_timeout_minutes,
+            advisor_chat_history_limit=advisor_chat_history_limit,
         )
     except Exception:
         logger.exception("Failed to process Telegram webhook update.")

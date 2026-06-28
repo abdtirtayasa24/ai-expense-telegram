@@ -40,6 +40,40 @@ class ConversationStatesRepository(BaseRepository):
         result = query.order("created_at", desc=True).limit(1).execute()
         return self.first(result)
 
+    def get_latest_for_user(self, user_id: str, state: str) -> Row | None:
+        result = (
+            self.table()
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("state", state)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        return self.first(result)
+
+    def list_expired_by_state(self, state: str, limit: int = 100) -> list[Row]:
+        result = (
+            self.table()
+            .select("*")
+            .eq("state", state)
+            .lt("expires_at", datetime.now(UTC).isoformat())
+            .order("expires_at")
+            .limit(limit)
+            .execute()
+        )
+        return self.rows(result)
+
+    def claim_expired_by_state(self, state: str, limit: int = 100) -> list[Row]:
+        result = self.client.rpc(
+            "claim_expired_conversation_states",
+            {
+                "p_state": state,
+                "p_limit": limit,
+            },
+        ).execute()
+        return self.rows(result)
+
     def update_for_user(
         self,
         state_id: str,

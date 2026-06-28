@@ -3,8 +3,10 @@ from typing import Annotated, Any
 from fastapi import Depends, Header, HTTPException, status
 from jose import JWTError
 
+from app.repositories.advisor_chat_repository import AdvisorChatRepository
 from app.repositories.base import Row
 from app.repositories.budgets_repository import BudgetsRepository
+from app.repositories.conversation_states_repository import ConversationStatesRepository
 from app.repositories.transactions_repository import TransactionsRepository
 from app.repositories.users_repository import UsersRepository
 from app.services.jwt_service import decode_access_token
@@ -26,6 +28,14 @@ def get_transactions_repository() -> TransactionsRepository:
 
 def get_budgets_repository() -> BudgetsRepository:
     return BudgetsRepository()
+
+
+def get_advisor_chat_repository() -> AdvisorChatRepository:
+    return AdvisorChatRepository()
+
+
+def get_conversation_states_repository() -> ConversationStatesRepository:
+    return ConversationStatesRepository()
 
 
 async def get_current_user(

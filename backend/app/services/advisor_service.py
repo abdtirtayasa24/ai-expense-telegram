@@ -290,18 +290,23 @@ async def generate_chat_answer(
     message: str,
     api_key: str,
     model: str,
+    chat_history: list[Row] | None = None,
 ) -> str:
     """Call Gemini to answer an advisor chat question."""
     client = genai.Client(api_key=api_key)
     config = types.GenerateContentConfig(
         system_instruction=_SYSTEM_INSTRUCTION,
     )
+    history = chat_history or []
     prompt = (
         f"Today date: {context['period']}\n"
         f"Timezone: Asia/Jakarta\n\n"
         f"User financial context:\n{json.dumps(context, ensure_ascii=False)}\n\n"
+        f"Recent advisor conversation:\n"
+        f"{json.dumps(_format_chat_history(history), ensure_ascii=False)}\n\n"
         f"User question:\n{message}\n\n"
-        f"Answer in Indonesian using only the data provided above."
+        f"Answer in Indonesian using only the data provided above. "
+        f"Use recent conversation only for continuity; do not invent financial data."
     )
     response = await client.aio.models.generate_content(
         model=model,
@@ -309,3 +314,14 @@ async def generate_chat_answer(
         config=config,
     )
     return response.text or "Maaf, saya belum bisa menjawab pertanyaan ini."
+
+
+def _format_chat_history(history: list[Row]) -> list[dict[str, str]]:
+    return [
+        {
+            "role": str(row.get("role", "")),
+            "content": str(row.get("content", "")),
+        }
+        for row in history
+        if row.get("role") in {"user", "assistant"} and row.get("content")
+    ]
