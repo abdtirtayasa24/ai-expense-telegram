@@ -9,13 +9,11 @@ from app.schemas.parser import TransactionCategory
 class BudgetCreate(BaseModel):
     category: TransactionCategory
     monthly_limit: Decimal = Field(gt=0)
-    month: date
+    month: date | None = None
 
 
 class BudgetUpdate(BaseModel):
     monthly_limit: Decimal | None = Field(default=None, gt=0)
-    category: TransactionCategory | None = None
-    month: date | None = None
 
 
 class BudgetOut(BaseModel):

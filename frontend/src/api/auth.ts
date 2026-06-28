@@ -13,6 +13,7 @@ export interface AuthenticatedUser {
     status: string;
     currency: string;
     timezone: string;
+    cashflow_period_start_day: number;
 }
 
 export interface AuthResponse {

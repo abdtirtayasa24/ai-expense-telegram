@@ -27,8 +27,9 @@ CURRENT_USER = {
 def budget_client(
     budgets_repository: BudgetsRepository,
     transactions_repository: TransactionsRepository,
+    current_user: dict | None = None,
 ) -> TestClient:
-    app.dependency_overrides[get_current_user] = lambda: CURRENT_USER
+    app.dependency_overrides[get_current_user] = lambda: current_user or CURRENT_USER
     app.dependency_overrides[get_budgets_repository] = lambda: budgets_repository
     app.dependency_overrides[get_transactions_repository] = (
         lambda: transactions_repository
@@ -93,6 +94,50 @@ def test_budget_creation_and_list_with_actuals() -> None:
     assert created.json()["remaining"] == 25000.0
     assert created.json()["percent_used"] == 75.0
     assert listed.json()["items"][0]["actual"] == 75000.0
+
+
+def test_budget_actuals_follow_custom_cashflow_period() -> None:
+    budgets = BudgetsRepository(FakeSupabaseClient())
+    transactions = TransactionsRepository(FakeSupabaseClient())
+    current_user = {**CURRENT_USER, "cashflow_period_start_day": 29}
+    seed_transaction(
+        transactions,
+        category="transportasi",
+        amount=Decimal("75000"),
+        transaction_date=date(2026, 6, 29),
+    )
+    seed_transaction(
+        transactions,
+        category="transportasi",
+        amount=Decimal("25000"),
+        transaction_date=date(2026, 7, 1),
+    )
+    seed_transaction(
+        transactions,
+        category="transportasi",
+        amount=Decimal("999999"),
+        transaction_date=date(2026, 6, 28),
+    )
+    client = budget_client(budgets, transactions, current_user)
+
+    try:
+        created = client.post(
+            "/budgets",
+            json={
+                "category": "transportasi",
+                "monthly_limit": 150000,
+                "month": "2026-07-03",
+            },
+        )
+        listed = client.get("/budgets?month=2026-06")
+    finally:
+        clear_overrides()
+
+    assert created.status_code == 201
+    assert created.json()["month"] == "2026-06-29"
+    assert created.json()["actual"] == 100000.0
+    assert created.json()["remaining"] == 50000.0
+    assert listed.json()["items"][0]["actual"] == 100000.0
 
 
 def test_budget_duplicate_rejects_with_conflict() -> None:

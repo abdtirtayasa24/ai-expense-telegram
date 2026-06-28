@@ -34,11 +34,6 @@ interface BudgetPanelProps {
     onUnauthorized: (message: string) => void;
 }
 
-function currentMonth(): string {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-}
-
 function errorMessage(error: unknown): string {
     if (axios.isAxiosError(error)) {
         const detail = error.response?.data?.detail;
@@ -117,10 +112,7 @@ export function BudgetPanel({
                 );
                 onDataChanged();
             } else {
-                const created = await createBudget(token, {
-                    ...form,
-                    month: currentMonth(),
-                });
+                const created = await createBudget(token, form);
                 setBudgets((current) => [created, ...current]);
                 onDataChanged();
             }

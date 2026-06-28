@@ -32,13 +32,13 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed application archit
 ai-expense-telegram/
   backend/
     app/
-      api/routes/       # auth, transactions, budgets, dashboard, advisor, internal jobs
+      api/routes/       # auth, transactions, budgets, dashboard, advisor, settings, internal jobs
       bot/              # Telegram webhook, commands, onboarding, advisor mode, responses
       core/             # config, telegram_auth
       integrations/     # supabase_client, telegram_client
       repositories/     # users, transactions, budgets, insights, conversation_states, advisor_chat
       schemas/          # auth, transaction, budget, dashboard, advisor, parser
-      services/         # parser, advisor, advisor chat, timeout, categories, jwt services
+      services/         # parser, advisor, cashflow period, timeout, categories, jwt services
       main.py
     tests/              # backend tests
     .env.example
@@ -50,9 +50,9 @@ ai-expense-telegram/
     MVP_IMPLEMENTED.md
   frontend/
     src/
-      api/              # auth, transactions, budgets, dashboard, advisor
+      api/              # auth, transactions, budgets, dashboard, advisor, settings
       assets/           # app logo
-      components/       # dashboard, page navigation, budget, advisor, transaction panels/modals
+      components/       # dashboard, page navigation, budget, advisor, settings, transaction panels/modals
       utils/            # helper functions
       App.tsx
       main.tsx
@@ -134,7 +134,7 @@ Use `.env.example` files as templates. Keep real secrets out of git.
 
 ## Supabase Migrations
 
-Migrations are in `supabase/migrations/`. For MVP, the maintainer applies these manually via Supabase SQL editor. Run all migrations in numeric order, currently 001 through 009.
+Migrations are in `supabase/migrations/`. For MVP, the maintainer applies these manually via Supabase SQL editor. Run all migrations in numeric order, currently 001 through 010.
 
 ## Deployment
 

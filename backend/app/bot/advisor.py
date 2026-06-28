@@ -12,6 +12,7 @@ from app.services.advisor_chat_service import (
     advisor_mode_payload,
     answer_advisor_question,
 )
+from app.services.cashflow_period import user_cashflow_start_day
 
 ADVISOR_MODE_STATE = "advisor_mode"
 logger = logging.getLogger(__name__)
@@ -84,6 +85,7 @@ async def handle_advisor_mode_message(
             api_key=gemini_api_key,
             model=gemini_model,
             history_limit=history_limit,
+            cashflow_period_start_day=user_cashflow_start_day(user),
         )
     except Exception:
         logger.exception("Advisor chat failed.")

@@ -39,6 +39,14 @@ function errorMessage(error: unknown): string {
 }
 
 function monthLabel(month: string): string {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(month)) {
+        const [year, monthNumber, day] = month.split("-").map(Number);
+        return new Intl.DateTimeFormat("id-ID", {
+            day: "numeric",
+            month: "short",
+            year: "2-digit",
+        }).format(new Date(year, monthNumber - 1, day));
+    }
     const [year, monthNumber] = month.split("-");
     return new Intl.DateTimeFormat("id-ID", {
         month: "short",
@@ -48,6 +56,18 @@ function monthLabel(month: string): string {
 
 function categoryLabel(category: string): string {
     return category.replace(/_/g, " ");
+}
+
+function periodLabel(period: string): string {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(period)) {
+        const [year, month, day] = period.split("-").map(Number);
+        return `periode mulai ${new Intl.DateTimeFormat("id-ID", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        }).format(new Date(year, month - 1, day))}`;
+    }
+    return `bulan ${period}`;
 }
 
 export function DashboardOverview({
@@ -137,7 +157,7 @@ export function DashboardOverview({
             <p className="eyebrow">Dashboard</p>
             <h1 id="dashboard-title">Halo {firstName ?? "kamu"}</h1>
             <p className="description">
-                Ringkasan bulan {data.summary.month} berdasarkan transaksi yang kamu catat.
+                Ringkasan {periodLabel(data.summary.month)} berdasarkan transaksi yang kamu catat.
             </p>
 
             <dl className="summary-grid" aria-label="Ringkasan bulanan">

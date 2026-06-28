@@ -89,6 +89,19 @@ class UsersRepository(BaseRepository):
         )
         return self.first(result)
 
+    def update_cashflow_period_start_day(
+        self,
+        user_id: str,
+        start_day: int,
+    ) -> Row | None:
+        result = (
+            self.table()
+            .update({"cashflow_period_start_day": start_day})
+            .eq("id", user_id)
+            .execute()
+        )
+        return self.first(result)
+
     def deactivate(self, telegram_user_id: int) -> Row | None:
         result = (
             self.table()

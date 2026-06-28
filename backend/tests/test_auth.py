@@ -43,6 +43,7 @@ class FakeUsersRepository:
             "onboarding_status": onboarding_status,
             "currency": "IDR",
             "timezone": "Asia/Jakarta",
+            "cashflow_period_start_day": 1,
         }
         self.users[telegram_user_id] = row
         return row
@@ -126,6 +127,7 @@ def test_mini_app_login_success_returns_jwt_and_profile() -> None:
         "status": "active",
         "currency": "IDR",
         "timezone": "Asia/Jakarta",
+        "cashflow_period_start_day": 1,
     }
 
 

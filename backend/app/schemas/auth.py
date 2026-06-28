@@ -14,6 +14,7 @@ class AuthenticatedUser(BaseModel):
     status: str
     currency: str
     timezone: str
+    cashflow_period_start_day: int = 1
 
 
 class TelegramMiniAppAuthResponse(BaseModel):

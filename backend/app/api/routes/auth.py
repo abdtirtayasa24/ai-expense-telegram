@@ -26,6 +26,7 @@ def user_profile(user: Row) -> AuthenticatedUser:
         status=user.get("status", "active"),
         currency=user.get("currency", "IDR"),
         timezone=user.get("timezone", "Asia/Jakarta"),
+        cashflow_period_start_day=user.get("cashflow_period_start_day", 1),
     )
 
 

@@ -1,4 +1,4 @@
-export type PageMenuTarget = "budget" | "advisor" | "transactions";
+export type PageMenuTarget = "budget" | "advisor" | "transactions" | "settings";
 
 interface PageMenuProps {
     onOpen: (page: PageMenuTarget) => void;
@@ -23,6 +23,11 @@ const menuItems: Array<{
         page: "transactions",
         title: "Transaksi",
         description: "Tambah, edit, atau hapus pemasukan dan pengeluaran manual.",
+    },
+    {
+        page: "settings",
+        title: "Pengaturan",
+        description: "Atur tanggal mulai periode cashflow sesuai siklus gajian kamu.",
     },
 ];
 

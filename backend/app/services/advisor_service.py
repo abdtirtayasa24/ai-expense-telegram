@@ -1,7 +1,7 @@
 """Advisor service for budgeting/cashflow insights using Gemini."""
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -12,6 +12,11 @@ from google.genai import types
 from app.repositories.base import Row
 from app.repositories.budgets_repository import BudgetsRepository
 from app.repositories.transactions_repository import TransactionsRepository
+from app.services.cashflow_period import (
+    add_months,
+    current_cashflow_period,
+    period_start_for_month,
+)
 
 JAKARTA_TZ = ZoneInfo("Asia/Jakarta")
 
@@ -90,33 +95,33 @@ _INSIGHTS_INSTRUCTION = (
 )
 
 
-def _current_month_date() -> tuple[str, datetime]:
-    now = datetime.now(JAKARTA_TZ)
-    return now.strftime("%Y-%m"), now
-
-
-def _month_start(year: int, month: int) -> datetime:
-    return datetime(year, month, 1, tzinfo=JAKARTA_TZ)
+def _period_key(period_start: datetime, start_day: int) -> str:
+    if start_day == 1:
+        return period_start.strftime("%Y-%m")
+    return period_start.date().isoformat()
 
 
 def _row_amount(row: Row) -> Decimal:
     return Decimal(str(row["amount"]))
 
 
-def _add_months(dt: datetime, delta: int) -> datetime:
-    month_index = dt.year * 12 + (dt.month - 1) + delta
-    return datetime(month_index // 12, (month_index % 12) + 1, 1, tzinfo=JAKARTA_TZ)
-
-
 def build_advisor_context(
     user_id: str,
     transactions_repository: TransactionsRepository,
     budgets_repository: BudgetsRepository,
+    cashflow_period_start_day: int = 1,
 ) -> dict[str, Any]:
-    """Aggregate the current user's financial context for the current month."""
-    period_key, now = _current_month_date()
-    month_start = _month_start(now.year, now.month)
-    next_start = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)  # type: ignore[attr-defined]
+    """Aggregate the current user's financial context for the current period."""
+    period_start_date, next_start_date = current_cashflow_period(
+        cashflow_period_start_day,
+    )
+    period_key = (
+        period_start_date.strftime("%Y-%m")
+        if cashflow_period_start_day == 1
+        else period_start_date.isoformat()
+    )
+    month_start = datetime.combine(period_start_date, datetime.min.time(), JAKARTA_TZ)
+    next_start = datetime.combine(next_start_date, datetime.min.time(), JAKARTA_TZ)
 
     income_total = Decimal("0")
     expense_total = Decimal("0")
@@ -140,8 +145,16 @@ def build_advisor_context(
 
     # Recurring detection: same name in previous months
     for delta in (1, 2):
-        prev_start = _add_months(month_start, -delta)
-        prev_next = _add_months(prev_start, 1)
+        prev_start_date = period_start_for_month(
+            add_months(period_start_date.replace(day=1), -delta),
+            cashflow_period_start_day,
+        )
+        prev_next_date = period_start_for_month(
+            add_months(period_start_date.replace(day=1), -(delta - 1)),
+            cashflow_period_start_day,
+        )
+        prev_start = datetime.combine(prev_start_date, datetime.min.time(), JAKARTA_TZ)
+        prev_next = datetime.combine(prev_next_date, datetime.min.time(), JAKARTA_TZ)
         prev_rows = _list_all(
             transactions_repository,
             user_id,
@@ -187,8 +200,16 @@ def build_advisor_context(
     # Last 3 months trend
     trend = []
     for delta in range(2, -1, -1):
-        m_start = _add_months(month_start, -delta)
-        m_next = _add_months(m_start, 1)
+        m_start_date = period_start_for_month(
+            add_months(period_start_date.replace(day=1), -delta),
+            cashflow_period_start_day,
+        )
+        m_next_date = period_start_for_month(
+            add_months(period_start_date.replace(day=1), -(delta - 1)),
+            cashflow_period_start_day,
+        )
+        m_start = datetime.combine(m_start_date, datetime.min.time(), JAKARTA_TZ)
+        m_next = datetime.combine(m_next_date, datetime.min.time(), JAKARTA_TZ)
         m_rows = _list_all(
             transactions_repository, user_id, m_start.date(), m_next.date()
         )
@@ -202,7 +223,7 @@ def build_advisor_context(
                 m_expense += amt
         trend.append(
             {
-                "month": m_start.strftime("%Y-%m"),
+                "month": _period_key(m_start, cashflow_period_start_day),
                 "income_total": float(m_income),
                 "expense_total": float(m_expense),
                 "net_cashflow": float(m_income - m_expense),
@@ -211,6 +232,8 @@ def build_advisor_context(
 
     return {
         "period": period_key,
+        "period_start": period_start_date.isoformat(),
+        "period_end": next_start_date.isoformat(),
         "income_total": float(income_total),
         "expense_total": float(expense_total),
         "net_cashflow": float(net_cashflow),

@@ -1,8 +1,7 @@
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import Annotated
-from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -18,19 +17,19 @@ from app.schemas.dashboard import (
     TrendItem,
     TrendResponse,
 )
+from app.services.cashflow_period import (
+    add_months,
+    current_cashflow_period,
+    period_start_for_month,
+    user_cashflow_start_day,
+)
 
 router = APIRouter()
-JAKARTA_TZ = ZoneInfo("Asia/Jakarta")
 
 
-def current_month() -> str:
-    return datetime.now(JAKARTA_TZ).strftime("%Y-%m")
-
-
-def parse_month_param(month: str | None) -> date:
-    value = month or current_month()
+def parse_month_param(month: str) -> date:
     try:
-        year_text, month_text = value.split("-", maxsplit=1)
+        year_text, month_text = month.split("-", maxsplit=1)
         return date(int(year_text), int(month_text), 1)
     except ValueError as exc:
         raise HTTPException(
@@ -39,19 +38,21 @@ def parse_month_param(month: str | None) -> date:
         ) from exc
 
 
-def next_month_start(month_start: date) -> date:
-    if month_start.month == 12:
-        return date(month_start.year + 1, 1, 1)
-    return date(month_start.year, month_start.month + 1, 1)
+def period_bounds(month: str | None, start_day: int) -> tuple[date, date]:
+    if month is None:
+        return current_cashflow_period(start_day)
+    period_start = period_start_for_month(parse_month_param(month), start_day)
+    next_period_start = period_start_for_month(
+        add_months(date(period_start.year, period_start.month, 1), 1),
+        start_day,
+    )
+    return period_start, next_period_start
 
 
-def add_months(month_start: date, delta: int) -> date:
-    month_index = month_start.year * 12 + (month_start.month - 1) + delta
-    return date(month_index // 12, (month_index % 12) + 1, 1)
-
-
-def month_key(month_start: date) -> str:
-    return month_start.strftime("%Y-%m")
+def period_key(period_start: date, start_day: int) -> str:
+    if start_day == 1:
+        return period_start.strftime("%Y-%m")
+    return period_start.isoformat()
 
 
 def row_amount(row: Row) -> Decimal:
@@ -110,17 +111,18 @@ async def dashboard_summary(
     ],
     month: Annotated[str | None, Query(pattern=r"^\d{4}-\d{2}$")] = None,
 ) -> DashboardSummary:
-    month_start = parse_month_param(month)
+    start_day = user_cashflow_start_day(current_user)
+    month_start, next_start = period_bounds(month, start_day)
     rows = list_all_transactions(
         transactions_repository,
         current_user["id"],
         month_start=month_start,
-        next_month_start=next_month_start(month_start),
+        next_month_start=next_start,
     )
     income_total, expense_total = totals(rows)
     net_cashflow = income_total - expense_total
     return DashboardSummary(
-        month=month_key(month_start),
+        month=period_key(month_start, start_day),
         income_total=float(income_total),
         expense_total=float(expense_total),
         net_cashflow=float(net_cashflow),
@@ -137,12 +139,13 @@ async def dashboard_categories(
     ],
     month: Annotated[str | None, Query(pattern=r"^\d{4}-\d{2}$")] = None,
 ) -> CategoryBreakdownResponse:
-    month_start = parse_month_param(month)
+    start_day = user_cashflow_start_day(current_user)
+    month_start, next_start = period_bounds(month, start_day)
     rows = list_all_transactions(
         transactions_repository,
         current_user["id"],
         month_start=month_start,
-        next_month_start=next_month_start(month_start),
+        next_month_start=next_start,
         transaction_type="expense",
     )
     amounts: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
@@ -180,23 +183,36 @@ async def dashboard_trend(
     ],
     months: Annotated[int, Query(ge=1, le=24)] = 6,
 ) -> TrendResponse:
-    end_month = parse_month_param(None)
-    start_month = add_months(end_month, -(months - 1))
+    start_day = user_cashflow_start_day(current_user)
+    end_month, end_next = current_cashflow_period(start_day)
+    start_month = period_start_for_month(
+        add_months(date(end_month.year, end_month.month, 1), -(months - 1)),
+        start_day,
+    )
     rows = list_all_transactions(
         transactions_repository,
         current_user["id"],
         month_start=start_month,
-        next_month_start=next_month_start(end_month),
+        next_month_start=end_next,
     )
     grouped: dict[str, list[Row]] = defaultdict(list)
     for row in rows:
         transaction_date = date.fromisoformat(str(row["transaction_date"]))
-        grouped[transaction_date.strftime("%Y-%m")].append(row)
+        period_start, _ = period_bounds(transaction_date.strftime("%Y-%m"), start_day)
+        if transaction_date < period_start:
+            period_start = period_start_for_month(
+                add_months(date(period_start.year, period_start.month, 1), -1),
+                start_day,
+            )
+        grouped[period_key(period_start, start_day)].append(row)
 
     items: list[TrendItem] = []
     for index in range(months):
-        current = add_months(start_month, index)
-        key = month_key(current)
+        current = period_start_for_month(
+            add_months(date(start_month.year, start_month.month, 1), index),
+            start_day,
+        )
+        key = period_key(current, start_day)
         income_total, expense_total = totals(grouped[key])
         items.append(
             TrendItem(

@@ -8,10 +8,11 @@ from app.api.routes import (
     dashboard,
     health,
     internal,
+    settings,
     transactions,
 )
 from app.bot.webhook import router as telegram_webhook_router
-from app.core.config import settings
+from app.core.config import settings as app_settings
 
 app = FastAPI(
     title="AI Telegram Expense Tracker",
@@ -21,7 +22,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        settings.mini_app_url,
+        app_settings.mini_app_url,
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -34,5 +35,6 @@ app.include_router(transactions.router, prefix="/transactions", tags=["transacti
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 app.include_router(budgets.router, prefix="/budgets", tags=["budgets"])
 app.include_router(advisor.router, prefix="/advisor", tags=["advisor"])
+app.include_router(settings.router, prefix="/settings", tags=["settings"])
 app.include_router(internal.router, prefix="/internal", tags=["internal"])
 app.include_router(telegram_webhook_router, prefix="/webhooks", tags=["telegram"])

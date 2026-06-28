@@ -27,6 +27,7 @@ rectangle "Backend\nFastAPI" {
   component "Transaction API\nCRUD" as TxApi
   component "Dashboard API" as Dashboard
   component "Budget API\nCRUD + actuals" as BudgetApi
+  component "Settings API\nCashflow period" as SettingsApi
   component "Advisor Service" as Advisor
   component "Advisor Chat Service" as AdvisorChat
   component "Auth Service\nTelegram initData validation" as Auth
@@ -61,6 +62,8 @@ MiniApp --> TxApi : manage transactions
 TxApi --> DB
 MiniApp --> BudgetApi : manage budgets
 BudgetApi --> DB
+MiniApp --> SettingsApi : set cashflow period
+SettingsApi --> DB
 MiniApp --> Advisor
 Advisor --> AdvisorChat
 Advisor --> DB
@@ -323,6 +326,7 @@ App -> App : show DashboardOverview + page menu
 App -> API : Authorization: Bearer <jwt>
 API -> API : validate JWT and current user state
 API -> DB : scope every query by user_id
+API -> DB : read users.cashflow_period_start_day
 
 alt dashboard summary/categories/trend/recent
   API -> DB : paginate transactions for aggregation
@@ -333,9 +337,13 @@ else transaction page
   API -> App : transaction page items + pagination metadata
   App -> App : edit transaction in modal dialog
 else budget CRUD
-  API -> DB : list/create/update/delete budgets by user_id
-  API -> DB : paginate expense transactions for actuals
+  API -> DB : list/create/update/delete budgets by user_id and cashflow period start
+  API -> DB : paginate expense transactions for actuals in the same cashflow period
   API -> App : budget progress with actual/remaining/percent_used
+else settings
+  App -> API : PATCH /settings/cashflow-period
+  API -> DB : update users.cashflow_period_start_day
+  API -> App : updated setting
 end
 
 App -> App : keep visited pages mounted and refresh stale data only when affected
@@ -351,7 +359,7 @@ participant "React Mini App" as App
 participant "Advisor API" as API
 participant "Advisor Service" as Advisor
 participant "Advisor Chat Service" as Chat
-cloud "Gemini API" as Gemini
+participant "Gemini API" as Gemini
 database "Supabase PostgreSQL" as DB
 
 User -> App : Open insight panel / ask question
@@ -388,7 +396,7 @@ participant "FastAPI Webhook" as API
 participant "Advisor Mode Handler" as Mode
 participant "Advisor Chat Service" as Chat
 participant "Parser Service" as Parser
-cloud "Gemini API" as Gemini
+participant "Gemini API" as Gemini
 database "Supabase PostgreSQL" as DB
 
 User -> Telegram : /advisor
@@ -522,7 +530,8 @@ API -> Cron : { ok: true, notified: n }
 | `/transactions` | `app.api.routes.transactions` | User-scoped transaction list/create/update/delete | JWT |
 | `/dashboard` | `app.api.routes.dashboard` | Summary, category breakdown, trend, recent transactions | JWT |
 | `/budgets` | `app.api.routes.budgets` | User-scoped budget list/create/update/delete with actual expenses | JWT |
-| `/advisor` | `app.api.routes.advisor` | Monthly insights and advisor chat | JWT |
+| `/advisor` | `app.api.routes.advisor` | Cashflow-period insights and advisor chat | JWT |
+| `/settings` | `app.api.routes.settings` | User settings, including cashflow period start day | JWT |
 | `/internal` | `app.api.routes.internal` | Scheduled/internal maintenance jobs | `X-Cron-Secret` |
 | `/webhooks` | `app.bot.webhook` | Telegram Bot webhook | Telegram webhook payload + in-app authorization |
 
@@ -540,12 +549,14 @@ GET    /dashboard/summary
 GET    /dashboard/categories
 GET    /dashboard/trend
 GET    /dashboard/recent-transactions
-GET    /budgets?month=YYYY-MM
+GET    /budgets?month=YYYY-MM optional
 POST   /budgets
 PATCH  /budgets/{budget_id}
 DELETE /budgets/{budget_id}
 POST   /advisor/insights
 POST   /advisor/chat
+GET    /settings
+PATCH  /settings/cashflow-period
 POST   /internal/jobs/advisor-mode-timeouts
 POST   /webhooks/telegram
 ```
@@ -559,7 +570,7 @@ POST   /webhooks/telegram
 ```text
 app/main.py                        FastAPI app, CORS, router registration
 app/api/dependencies.py            Dependency factories and JWT current-user guard
-app/api/routes/*.py                REST API route handlers
+app/api/routes/*.py                REST API route handlers, including user settings
 app/bot/webhook.py                 Telegram webhook entrypoint + BackgroundTasks
 app/bot/commands.py                Admin command handling
 app/bot/onboarding.py              User access/onboarding dispatch
@@ -571,6 +582,7 @@ app/services/gemini_parser.py      Gemini fallback transaction parser
 app/services/advisor_service.py    Advisor context aggregation + Gemini prompts
 app/services/advisor_chat_service.py Shared advisor chat persistence/orchestration
 app/services/advisor_mode_timeout_service.py Expired advisor mode notifications
+app/services/cashflow_period.py    Shared cashflow period calculation
 app/core/*.py                      Settings and Telegram initData validation
 app/integrations/*.py              Supabase and Telegram HTTP clients
 ```
@@ -585,14 +597,15 @@ Notes:
 
 ```text
 src/App.tsx                        Telegram auth bootstrap, page navigation, keep-alive cache
-src/api/*.ts                       Typed Axios API helpers
+src/api/*.ts                       Typed Axios API helpers, including settings
 src/components/DashboardOverview.tsx Summary, categories, trend, recent transactions
-src/components/PageMenu.tsx        Dashboard menu for Budget, AI Advisor, Transaksi pages
+src/components/PageMenu.tsx        Dashboard menu for Budget, AI Advisor, Transaksi, Pengaturan pages
 src/components/PageHeader.tsx      Shared page title/back navigation
 src/components/BudgetPanel.tsx     Budget CRUD and progress display
 src/components/InsightPanel.tsx    Advisor insights and chat UI
 src/components/TransactionsPanel.tsx Paginated transaction CRUD UI
 src/components/EditTransactionModal.tsx Modal edit form for transactions
+src/components/SettingsPanel.tsx   Cashflow period setting UI
 src/utils/currency.ts              IDR formatting helper
 src/styles.css                     Global plain CSS styling
 ```
@@ -618,6 +631,7 @@ entity users {
   language_code : text
   currency : text
   timezone : text
+  cashflow_period_start_day : integer
   registered_by_telegram_id : bigint
   registered_at : timestamptz
   unregistered_at : timestamptz
@@ -701,6 +715,7 @@ users.telegram_user_id unique not null
 users.role in ('admin', 'user')
 users.status in ('active', 'inactive')
 users.onboarding_status in ('pending', 'asking_first_name', 'asking_last_name', 'completed')
+users.cashflow_period_start_day between 1 and 31
 
 transactions.type in ('income', 'expense')
 transactions.amount > 0

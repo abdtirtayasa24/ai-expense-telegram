@@ -20,8 +20,11 @@ CURRENT_USER = {
 }
 
 
-def dashboard_client(repository: TransactionsRepository) -> TestClient:
-    app.dependency_overrides[get_current_user] = lambda: CURRENT_USER
+def dashboard_client(
+    repository: TransactionsRepository,
+    current_user: dict | None = None,
+) -> TestClient:
+    app.dependency_overrides[get_current_user] = lambda: current_user or CURRENT_USER
     app.dependency_overrides[get_transactions_repository] = lambda: repository
     return TestClient(app)
 
@@ -82,6 +85,44 @@ def test_dashboard_summary_calculates_current_user_month_totals() -> None:
     assert response.status_code == 200
     assert response.json() == {
         "month": "2026-06",
+        "income_total": 100000.0,
+        "expense_total": 25000.0,
+        "net_cashflow": 75000.0,
+        "savings_rate_percent": 75.0,
+    }
+
+
+def test_dashboard_summary_uses_custom_cashflow_period() -> None:
+    repository = TransactionsRepository(FakeSupabaseClient())
+    current_user = {**CURRENT_USER, "cashflow_period_start_day": 29}
+    seed_transaction(
+        repository,
+        transaction_type="income",
+        name="Gaji",
+        category="pendapatan",
+        amount=Decimal("100000"),
+        transaction_date=date(2026, 6, 29),
+    )
+    seed_transaction(
+        repository,
+        amount=Decimal("25000"),
+        transaction_date=date(2026, 7, 1),
+    )
+    seed_transaction(
+        repository,
+        amount=Decimal("999999"),
+        transaction_date=date(2026, 6, 28),
+    )
+    client = dashboard_client(repository, current_user)
+
+    try:
+        response = client.get("/dashboard/summary?month=2026-06")
+    finally:
+        clear_overrides()
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "month": "2026-06-29",
         "income_total": 100000.0,
         "expense_total": 25000.0,
         "net_cashflow": 75000.0,

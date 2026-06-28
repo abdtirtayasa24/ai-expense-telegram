@@ -8,6 +8,7 @@ import { BudgetPanel } from "./components/BudgetPanel";
 import { InsightPanel } from "./components/InsightPanel";
 import { PageHeader } from "./components/PageHeader";
 import { PageMenu, type PageMenuTarget } from "./components/PageMenu";
+import { SettingsPanel } from "./components/SettingsPanel";
 import { TransactionsPanel } from "./components/TransactionsPanel";
 
 type AuthState =
@@ -51,6 +52,7 @@ export default function App() {
     const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0);
     const [budgetRefreshKey, setBudgetRefreshKey] = useState(0);
     const [advisorRefreshKey, setAdvisorRefreshKey] = useState(0);
+    const [settingsRefreshKey, setSettingsRefreshKey] = useState(0);
 
     useEffect(() => {
         let isMounted = true;
@@ -138,6 +140,25 @@ export default function App() {
         setAdvisorRefreshKey((value) => value + 1);
     };
 
+    const handleCashflowPeriodChanged = (startDay: number) => {
+        setAuthState((current) => {
+            if (current.status !== "authenticated") {
+                return current;
+            }
+            return {
+                ...current,
+                user: {
+                    ...current.user,
+                    cashflow_period_start_day: startDay,
+                },
+            };
+        });
+        setDashboardRefreshKey((value) => value + 1);
+        setBudgetRefreshKey((value) => value + 1);
+        setAdvisorRefreshKey((value) => value + 1);
+        setSettingsRefreshKey((value) => value + 1);
+    };
+
     return (
         <main className="app-shell dashboard-shell">
             <header className="dashboard-brand" aria-label="The Tirtayasa">
@@ -205,6 +226,24 @@ export default function App() {
                         isActive={activePage === "transactions"}
                         refreshKey={0}
                         onDataChanged={markTransactionDataChanged}
+                        onUnauthorized={handleUnauthorized}
+                    />
+                </div>
+            ) : null}
+
+            {visitedPages.has("settings") ? (
+                <div className="page-panel" hidden={activePage !== "settings"}>
+                    <PageHeader
+                        titleId="settings-page-title"
+                        title="Pengaturan"
+                        description="Atur periode cashflow agar Dashboard dan Budget mengikuti siklus gajian kamu."
+                        onBack={() => openPage("dashboard")}
+                    />
+                    <SettingsPanel
+                        token={authState.token}
+                        isActive={activePage === "settings"}
+                        refreshKey={settingsRefreshKey}
+                        onCashflowPeriodChanged={handleCashflowPeriodChanged}
                         onUnauthorized={handleUnauthorized}
                     />
                 </div>

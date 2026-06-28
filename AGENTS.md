@@ -82,6 +82,7 @@ frontend/src/
 - Components are flat files in `components/`, not nested folders (until a component needs 3+ sibling files).
 - Data fetching lives in components via `useEffect`/`useCallback`.
 - Visited Mini App pages may stay mounted for lightweight cache; use explicit refresh keys when related data becomes stale.
+- Dashboard, Budget, and AI Advisor use the user's `cashflow_period_start_day` setting for their current period.
 - Token from local storage, sent via `Authorization: Bearer <jwt>` header.
 - All API calls go through typed helpers in `src/api/`.
 - No UI library — use existing CSS classes or add new ones to `styles.css`.
@@ -158,6 +159,7 @@ class SomeRepository(BaseRepository):
 - ✅ Save raw Telegram message text with every bot-created transaction.
 - ✅ For bot transactions: `source="telegram_chat"`. For Mini App: `source="manual"`, `parser="manual"`.
 - ✅ Paginate through all rows when aggregating (dashboard, budget actuals, advisor context) using page-size loops.
+- ✅ Use `cashflow_period_start_day` for Dashboard, Budget actuals, and Advisor context; default day 1 preserves calendar-month behavior.
 - ✅ Keep all bot/advisors responses in Indonesian.
 - ✅ Protect internal job endpoints with `X-Cron-Secret` and `CRON_SECRET`.
 - ✅ Use `@patch.dict("os.environ", {…})` in tests that need settings.
@@ -183,7 +185,7 @@ class SomeRepository(BaseRepository):
 
 ## Database Schema (Key Points)
 
-- `users`: PK uuid, unique `telegram_user_id`, `status` (active/inactive), `onboarding_status` (pending/asking_first_name/asking_last_name/completed).
+- `users`: PK uuid, unique `telegram_user_id`, `status` (active/inactive), `onboarding_status` (pending/asking_first_name/asking_last_name/completed), `cashflow_period_start_day` (1-31).
 - `transactions`: PK uuid, FK to users, `type` (income/expense), `category` (12 fixed values), `amount` numeric(14,2) > 0, `parser` (rule_based/gemini/manual), `source` (telegram_chat/manual).
 - `budgets`: PK uuid, FK to users, unique(user_id, category, month), `monthly_limit` > 0.
 - `advisor_insights`: PK uuid, FK to users, `insight_type`, `summary`.

@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -20,6 +21,7 @@ from app.services.advisor_service import (
     build_advisor_context,
     generate_insights,
 )
+from app.services.cashflow_period import user_cashflow_start_day
 
 router = APIRouter()
 
@@ -41,6 +43,7 @@ async def advisor_insights(
         current_user["id"],
         transactions_repository,
         budgets_repository,
+        cashflow_period_start_day=user_cashflow_start_day(current_user),
     )
     try:
         result = await generate_insights(
@@ -58,8 +61,8 @@ async def advisor_insights(
     insights_repo = InsightsRepository()
     insights_repo.create(
         user_id=current_user["id"],
-        period_start=context["last_3_months"][0]["month"] + "-01",
-        period_end=context["period"] + "-01",
+        period_start=date.fromisoformat(context["period_start"]),
+        period_end=date.fromisoformat(context["period_end"]),
         insight_type="monthly_insights",
         summary=result["summary"],
     )
@@ -99,6 +102,7 @@ async def advisor_chat(
             api_key=settings.gemini_api_key,
             model=settings.gemini_model,
             history_limit=settings.advisor_chat_history_limit,
+            cashflow_period_start_day=user_cashflow_start_day(current_user),
         )
     except Exception:
         raise HTTPException(

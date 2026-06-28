@@ -83,6 +83,69 @@ async def test_build_advisor_context_aggregates_current_user_data() -> None:
 
 
 @patch.dict("os.environ", _FAKE_ENV)
+async def test_build_advisor_context_uses_custom_cashflow_period() -> None:
+    transactions = TransactionsRepository(FakeSupabaseClient())
+    budgets = BudgetsRepository(FakeSupabaseClient())
+    transactions.create(
+        user_id="user-1",
+        transaction_type="income",
+        name="Gaji",
+        category="pendapatan",
+        amount=Decimal("100000"),
+        transaction_date=date(2026, 6, 29),
+        source="manual",
+        parser="manual",
+    )
+    transactions.create(
+        user_id="user-1",
+        transaction_type="expense",
+        name="Makan",
+        category="makanan_minuman",
+        amount=Decimal("25000"),
+        transaction_date=date(2026, 7, 1),
+        source="manual",
+        parser="manual",
+    )
+    transactions.create(
+        user_id="user-1",
+        transaction_type="expense",
+        name="Lama",
+        category="transportasi",
+        amount=Decimal("999999"),
+        transaction_date=date(2026, 6, 28),
+        source="manual",
+        parser="manual",
+    )
+    budgets.create(
+        "user-1",
+        "makanan_minuman",
+        Decimal("20000"),
+        date(2026, 6, 29),
+    )
+
+    with patch(
+        "app.services.advisor_service.current_cashflow_period",
+        return_value=(date(2026, 6, 29), date(2026, 7, 29)),
+    ):
+        context = build_advisor_context(
+            "user-1",
+            transactions,
+            budgets,
+            cashflow_period_start_day=29,
+        )
+
+    assert context["period"] == "2026-06-29"
+    assert context["period_start"] == "2026-06-29"
+    assert context["period_end"] == "2026-07-29"
+    assert context["income_total"] == 100000.0
+    assert context["expense_total"] == 25000.0
+    assert context["net_cashflow"] == 75000.0
+    assert context["budget_violations"] == [
+        {"category": "makanan_minuman", "budget": 20000.0, "actual": 25000.0}
+    ]
+
+
+@patch.dict("os.environ", _FAKE_ENV)
 async def test_system_instruction_prohibits_investment_advice() -> None:
     """The system instruction must prohibit investment, crypto, and stock advice."""
     instruction = _SYSTEM_INSTRUCTION.lower()

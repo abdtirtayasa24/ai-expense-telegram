@@ -18,12 +18,14 @@ async def answer_advisor_question(
     api_key: str,
     model: str,
     history_limit: int,
+    cashflow_period_start_day: int = 1,
 ) -> str:
     history = advisor_chat_repository.list_recent_for_user(user_id, history_limit)
     context = build_advisor_context(
         user_id,
         transactions_repository,
         budgets_repository,
+        cashflow_period_start_day=cashflow_period_start_day,
     )
     answer = await generate_chat_answer(
         context,

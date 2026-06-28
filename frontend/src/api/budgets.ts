@@ -26,12 +26,9 @@ function authHeaders(token: string) {
 }
 
 export async function listBudgets(token: string): Promise<Budget[]> {
-    const now = new Date();
-    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const response = await axios.get<BudgetListResponse>(
-        `${API_BASE_URL}/budgets?month=${month}`,
-        { headers: authHeaders(token) },
-    );
+    const response = await axios.get<BudgetListResponse>(`${API_BASE_URL}/budgets`, {
+        headers: authHeaders(token),
+    });
     return response.data.items;
 }
 
@@ -40,7 +37,6 @@ export async function createBudget(
     payload: {
         category: TransactionCategory;
         monthly_limit: number;
-        month: string;
     },
 ): Promise<Budget> {
     const response = await axios.post<Budget>(
