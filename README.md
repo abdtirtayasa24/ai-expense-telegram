@@ -19,7 +19,12 @@ Users record expenses and income by chatting with a Telegram bot in Indonesian n
 
 ## Architecture
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detail application architecture.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed application architecture, especially:
+
+- [Core Flows](docs/ARCHITECTURE.md#core-flows)
+- [API Surface](docs/ARCHITECTURE.md#api-surface)
+- [Code Architecture](docs/ARCHITECTURE.md#code-architecture)
+- [Data Model](docs/ARCHITECTURE.md#data-model)
 
 ## Project Structure
 
@@ -27,13 +32,13 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detail application architec
 ai-expense-telegram/
   backend/
     app/
-      api/routes/       # auth, transactions, budgets, dashboard, advisor
-      bot/              # Telegram webhook, commands, onboarding, responses
+      api/routes/       # auth, transactions, budgets, dashboard, advisor, internal jobs
+      bot/              # Telegram webhook, commands, onboarding, advisor mode, responses
       core/             # config, telegram_auth
       integrations/     # supabase_client, telegram_client
-      repositories/     # users, transactions, budgets, insights, conversation_states
+      repositories/     # users, transactions, budgets, insights, conversation_states, advisor_chat
       schemas/          # auth, transaction, budget, dashboard, advisor, parser
-      services/         # rule_parser, gemini_parser, advisor_service, transaction_categories, jwt_service
+      services/         # parser, advisor, advisor chat, timeout, categories, jwt services
       main.py
     tests/              # backend tests
     .env.example
@@ -129,7 +134,7 @@ Use `.env.example` files as templates. Keep real secrets out of git.
 
 ## Supabase Migrations
 
-Migrations are in `supabase/migrations/`. For MVP, the maintainer applies these manually via Supabase SQL editor. Run 001 through 007 in order.
+Migrations are in `supabase/migrations/`. For MVP, the maintainer applies these manually via Supabase SQL editor. Run all migrations in numeric order, currently 001 through 009.
 
 ## Deployment
 

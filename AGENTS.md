@@ -38,6 +38,8 @@ This document is the definitive guide for any AI coding agent (or human contribu
 
 ### Backend Pattern
 
+For the current API surface, module map, core flows, Telegram advisor mode, internal jobs, and database constraints, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 The backend follows a layered architecture:
 
 ```
@@ -57,6 +59,7 @@ app/
 **Rules:**
 - Routes call services and repositories, never the database client directly.
 - Repositories extend `BaseRepository` and receive a `SupabaseClient` (real or fake).
+- Advisor chat history is stored through `advisor_chat_repository.py`; see the architecture data model for details.
 - All protected API endpoints use `get_current_user` dependency.
 - All data queries must scope by `user_id`.
 - Use `Annotated[Type, Depends(factory)]` for FastAPI dependencies.
@@ -155,11 +158,12 @@ class SomeRepository(BaseRepository):
 - ✅ For bot transactions: `source="telegram_chat"`. For Mini App: `source="manual"`, `parser="manual"`.
 - ✅ Paginate through all rows when aggregating (dashboard, budget actuals, advisor context) using page-size loops.
 - ✅ Keep all bot/advisors responses in Indonesian.
+- ✅ Protect internal job endpoints with `X-Cron-Secret` and `CRON_SECRET`.
 - ✅ Use `@patch.dict("os.environ", {…})` in tests that need settings.
 - ✅ Run full backend test suite + ruff + frontend build + frontend lint before reporting completion.
 
 ### Don't
-- ❌ Expose `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`, `JWT_SECRET_KEY`, or `TELEGRAM_BOT_TOKEN` to frontend.
+- ❌ Expose `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`, `JWT_SECRET_KEY`, `TELEGRAM_BOT_TOKEN`, or `CRON_SECRET` to frontend.
 - ❌ Use `os.getenv()` — use `pydantic-settings`.
 - ❌ Use Pydantic v1 patterns (`class Config`, `@validator`, `orm_mode`).
 - ❌ Use `@app.on_event("startup"/"shutdown")` — use lifespan.
@@ -183,6 +187,8 @@ class SomeRepository(BaseRepository):
 - `budgets`: PK uuid, FK to users, unique(user_id, category, month), `monthly_limit` > 0.
 - `advisor_insights`: PK uuid, FK to users, `insight_type`, `summary`.
 - `conversation_states`: PK uuid, FK to users, `state`, `payload` jsonb, `expires_at`.
+- `advisor_chat_messages`: PK uuid, FK to users, `role`, `content`, `source`, `metadata`, `created_at`.
+- See [docs/ARCHITECTURE.md#data-model](docs/ARCHITECTURE.md#data-model) for the full current data model, constraints, indexes, triggers, and RPCs.
 - Migrations applied manually by maintainer — agent does NOT run migrations.
 
 ## Transaction Categories (Fixed Enum)
