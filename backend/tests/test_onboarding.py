@@ -297,7 +297,7 @@ async def test_completed_user_saves_expense_transaction_payload() -> None:
             "id": "tx-1",
             "user_id": "user-111",
             "transaction_type": "expense",
-            "name": "Parkir",
+            "name": "Bayar Parkir",
             "category": "transportasi",
             "amount": Decimal("5000"),
             "transaction_date": today_jakarta(),
@@ -308,7 +308,7 @@ async def test_completed_user_saves_expense_transaction_payload() -> None:
         }
     ]
     assert telegram_client.messages == [
-        (1234, "Oke, pengeluaran parkir Rp5.000 sudah tercatat.")
+        (1234, "Oke, pengeluaran bayar parkir Rp5.000 sudah tercatat.")
     ]
 
 
@@ -332,7 +332,7 @@ async def test_completed_user_saves_income_transaction() -> None:
     assert transactions_repository.transactions[0]["transaction_type"] == "income"
     assert transactions_repository.transactions[0]["amount"] == Decimal("8000000")
     assert telegram_client.messages == [
-        (1234, "Oke, pemasukan transaksi Rp8.000.000 sudah tercatat.")
+        (1234, "Oke, pemasukan gaji masuk Rp8.000.000 sudah tercatat.")
     ]
 
 
@@ -343,7 +343,7 @@ async def test_low_confidence_parse_asks_clarification_without_saving() -> None:
     repository.add_user(111, onboarding_status="completed")
 
     allowed = await handle_registered_user_message(
-        text="Parkir 5000",
+        text="foo 5000",
         telegram_user_id=111,
         chat_id=1234,
         users_repository=repository,  # type: ignore[arg-type]

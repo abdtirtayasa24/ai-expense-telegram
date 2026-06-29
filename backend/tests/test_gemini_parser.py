@@ -156,7 +156,7 @@ async def test_low_confidence_rule_parser_calls_gemini_fallback(
     client = FakeTelegramClient()
 
     allowed = await handle_transaction_message(
-        text="Parkir 5000",
+        text="foo 5000",
         user=_DEFAULT_USER,
         chat_id=1234,
         transactions_repository=repo,  # type: ignore[arg-type]
@@ -167,6 +167,7 @@ async def test_low_confidence_rule_parser_calls_gemini_fallback(
     assert allowed is True
     mock_gemini_parse.assert_called_once()
     assert repo.transactions[0]["parser"] == "gemini"
+    # mock returns default name="Parkir" from make_parsed_transaction()
     assert repo.transactions[0]["name"] == "Parkir"
 
 
@@ -190,7 +191,7 @@ async def test_gemini_needs_clarification_asks_user(
     client = FakeTelegramClient()
 
     allowed = await handle_transaction_message(
-        text="Parkir 5000",
+        text="foo 5000",
         user=_DEFAULT_USER,
         chat_id=1234,
         transactions_repository=repo,  # type: ignore[arg-type]
@@ -220,7 +221,7 @@ async def test_gemini_api_error_asks_clarification(
     client = FakeTelegramClient()
 
     allowed = await handle_transaction_message(
-        text="Parkir 5000",
+        text="foo 5000",
         user=_DEFAULT_USER,
         chat_id=1234,
         transactions_repository=repo,  # type: ignore[arg-type]
@@ -249,7 +250,7 @@ async def test_gemini_invalid_output_asks_clarification(
     client = FakeTelegramClient()
 
     allowed = await handle_transaction_message(
-        text="Parkir 5000",
+        text="foo 5000",
         user=_DEFAULT_USER,
         chat_id=1234,
         transactions_repository=repo,  # type: ignore[arg-type]

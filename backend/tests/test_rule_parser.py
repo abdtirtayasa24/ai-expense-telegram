@@ -120,16 +120,17 @@ def test_parser_returns_clarification_for_missing_amount() -> None:
     assert result.needs_clarification is True
     assert result.confidence_score < THRESHOLD
     assert result.clarification_question == (
-        "Nominalnya belum terbaca. Contoh: Bayar parkir 5000"
+        "Nominalnya belum terbaca. Contoh: Bayar parkir 5000 atau Bayar paylater 250rb"
     )
 
 
 def test_parser_returns_clarification_for_unclear_type() -> None:
-    result = parse_rule_based_transaction("Parkir 5000", today=TODAY)
+    # Use input without category keyword to trigger unclear type
+    result = parse_rule_based_transaction("abc 5000", today=TODAY)
 
     assert result.amount == Decimal("5000")
     assert result.type is None
-    assert result.category == "transportasi"
+    assert result.category == "lainnya"
     assert result.needs_clarification is True
     assert result.confidence_score < THRESHOLD
     assert result.clarification_question is not None
