@@ -36,8 +36,10 @@ export function PageMenu({ onOpen }: PageMenuProps) {
         <section className="page-menu" aria-labelledby="page-menu-title">
             <div className="section-header">
                 <div>
-                    <p className="eyebrow">Menu</p>
                     <h2 id="page-menu-title">Kelola keuangan kamu</h2>
+                    <p className="section-description">
+                        Pilih area yang ingin kamu cek atau perbarui.
+                    </p>
                 </div>
             </div>
             <div className="page-menu-grid">
@@ -46,6 +48,7 @@ export function PageMenu({ onOpen }: PageMenuProps) {
                         key={item.page}
                         className="page-menu-card"
                         type="button"
+                        aria-label={`Buka halaman ${item.title}`}
                         onClick={() => onOpen(item.page)}
                     >
                         <span>{item.title}</span>

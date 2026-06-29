@@ -96,8 +96,10 @@ export function SettingsPanel({
         <section className="transactions-section" aria-labelledby="settings-title">
             <div className="section-header">
                 <div>
-                    <p className="eyebrow">Pengaturan</p>
                     <h2 id="settings-title">Periode cashflow</h2>
+                    <p className="section-description">
+                        Samakan Dashboard, Budget, dan AI Advisor dengan siklus gajian kamu.
+                    </p>
                 </div>
             </div>
 
@@ -137,7 +139,7 @@ export function SettingsPanel({
             )}
 
             {message ? (
-                <p className="list-state" role="status">
+                <p className="list-state success-state" role="status">
                     {message}
                 </p>
             ) : null}

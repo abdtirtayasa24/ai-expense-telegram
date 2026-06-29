@@ -111,8 +111,10 @@ export function EditTransactionModal({
             >
                 <div className="modal-header">
                     <div>
-                        <p className="eyebrow">Edit</p>
                         <h2 id="edit-transaction-title">Edit transaksi</h2>
+                        <p className="section-description">
+                            Perbarui detail transaksi tanpa meninggalkan halaman.
+                        </p>
                     </div>
                     <button
                         ref={closeButtonRef}
@@ -187,7 +189,7 @@ export function EditTransactionModal({
                                         amount: Number(event.target.value),
                                     }))
                                 }
-                                placeholder="5000"
+                                placeholder="Contoh: 5000"
                             />
                         </label>
                         <label>

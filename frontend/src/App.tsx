@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 import { type AuthenticatedUser, loginWithTelegramMiniApp } from "./api/auth";
-import logoUrl from "./assets/logo.png";
+import logoUrl from "./assets/logo.svg";
 import { DashboardOverview } from "./components/DashboardOverview";
 import { BudgetPanel } from "./components/BudgetPanel";
 import { InsightPanel } from "./components/InsightPanel";
@@ -92,7 +92,6 @@ export default function App() {
             <main className="app-shell">
                 <section className="hero-card" aria-busy="true">
                     <BrandHeader />
-                    <p className="eyebrow">Telegram Mini App</p>
                     <h1>Memuat...</h1>
                     <p className="description">Sedang memvalidasi akses Telegram kamu.</p>
                 </section>
@@ -105,7 +104,6 @@ export default function App() {
             <main className="app-shell">
                 <section className="hero-card access-denied" role="alert">
                     <BrandHeader />
-                    <p className="eyebrow">Akses ditolak</p>
                     <h1>Belum bisa masuk</h1>
                     <p className="description">{authState.message}</p>
                     <p className="note">
@@ -120,7 +118,13 @@ export default function App() {
     const openPage = (page: ActivePage) => {
         setVisitedPages((current) => new Set(current).add(page));
         setActivePage(page);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        const prefersReducedMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)",
+        ).matches;
+        window.scrollTo({
+            top: 0,
+            behavior: prefersReducedMotion ? "auto" : "smooth",
+        });
     };
 
     const handleUnauthorized = (message: string) => {

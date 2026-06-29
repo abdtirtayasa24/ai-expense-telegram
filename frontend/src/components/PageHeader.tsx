@@ -12,7 +12,6 @@ export function PageHeader({ titleId, title, description, onBack }: PageHeaderPr
                 ← Dashboard
             </button>
             <div>
-                <p className="eyebrow">Halaman</p>
                 <h1 id={titleId}>{title}</h1>
                 <p>{description}</p>
             </div>

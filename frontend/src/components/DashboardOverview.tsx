@@ -81,6 +81,30 @@ export function DashboardOverview({
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [lastLoadedRefreshKey, setLastLoadedRefreshKey] = useState<number | null>(null);
+    const [activeCategory, setActiveCategory] = useState<string | null>(null);
+    const [hoverCategory, setHoverCategory] = useState<string | null>(null);
+
+    const categoryDonut = useMemo(() => {
+        const categories = data?.categories;
+        if (categories === undefined || categories.length === 0) {
+            return null;
+        }
+
+        let cumulativePercent = 0;
+        return categories.map((item, index) => {
+            const percent = Math.min(Math.max(0, item.percent), 100);
+            const colorClassName = `category-slice-${index % 6}`;
+            const slice = {
+                ...item,
+                percent,
+                offset: -cumulativePercent,
+                className: `category-slice ${colorClassName}`,
+                colorClassName,
+            };
+            cumulativePercent += percent;
+            return slice;
+        });
+    }, [data]);
 
     const maxTrendAmount = useMemo(() => {
         if (!data?.trend.length) {
@@ -88,6 +112,7 @@ export function DashboardOverview({
         }
         return Math.max(
             ...data.trend.map((item) => Math.max(item.income_total, item.expense_total)),
+            1,
         );
     }, [data]);
 
@@ -127,7 +152,6 @@ export function DashboardOverview({
     if (isLoading) {
         return (
             <section className="hero-card dashboard-overview" aria-busy="true">
-                <p className="eyebrow">Dashboard</p>
                 <h1>Memuat ringkasan...</h1>
                 <p className="description">Sedang menghitung ringkasan keuangan kamu.</p>
             </section>
@@ -137,7 +161,6 @@ export function DashboardOverview({
     if (error || !data) {
         return (
             <section className="hero-card dashboard-overview" role="alert">
-                <p className="eyebrow">Dashboard</p>
                 <h1>Belum bisa memuat data</h1>
                 <p className="description">{error ?? "Data dashboard tidak tersedia."}</p>
                 <button className="secondary-button" type="button" onClick={() => void loadDashboard()}>
@@ -151,10 +174,13 @@ export function DashboardOverview({
         data.summary.income_total > 0 ||
         data.summary.expense_total > 0 ||
         data.recentTransactions.length > 0;
+    const selectedCategoryKey = hoverCategory ?? activeCategory;
+    const selectedCategory = selectedCategoryKey === null
+        ? undefined
+        : categoryDonut?.find((item) => item.category === selectedCategoryKey);
 
     return (
         <section className="hero-card dashboard-overview" aria-labelledby="dashboard-title">
-            <p className="eyebrow">Dashboard</p>
             <h1 id="dashboard-title">Halo {firstName ?? "kamu"}</h1>
             <p className="description">
                 Ringkasan {periodLabel(data.summary.month)} berdasarkan transaksi yang kamu catat.
@@ -163,15 +189,17 @@ export function DashboardOverview({
             <dl className="summary-grid" aria-label="Ringkasan bulanan">
                 <div>
                     <dt>Pemasukan</dt>
-                    <dd>{formatRupiah(data.summary.income_total)}</dd>
+                    <dd className="income">{formatRupiah(data.summary.income_total)}</dd>
                 </div>
                 <div>
                     <dt>Pengeluaran</dt>
-                    <dd>{formatRupiah(data.summary.expense_total)}</dd>
+                    <dd className="expense">{formatRupiah(data.summary.expense_total)}</dd>
                 </div>
                 <div>
                     <dt>Cashflow</dt>
-                    <dd>{formatRupiah(data.summary.net_cashflow)}</dd>
+                    <dd className={data.summary.net_cashflow >= 0 ? "income" : "expense"}>
+                        {formatRupiah(data.summary.net_cashflow)}
+                    </dd>
                 </div>
                 <div>
                     <dt>Savings rate</dt>
@@ -188,28 +216,117 @@ export function DashboardOverview({
             <div className="dashboard-grid">
                 <section className="dashboard-card" aria-labelledby="category-title">
                     <h2 id="category-title">Kategori pengeluaran</h2>
-                    {data.categories.length === 0 ? (
+                    {categoryDonut === null ? (
                         <p className="muted-text">Belum ada pengeluaran bulan ini.</p>
                     ) : (
-                        <ul className="breakdown-list">
-                            {data.categories.map((item) => (
-                                <li key={item.category}>
-                                    <div className="breakdown-row">
-                                        <span>{categoryLabel(item.category)}</span>
-                                        <strong>{formatRupiah(item.amount)}</strong>
-                                    </div>
-                                    <div className="progress-track" aria-hidden="true">
-                                        <span style={{ width: `${item.percent}%` }} />
-                                    </div>
-                                    <small>{item.percent}% dari pengeluaran</small>
-                                </li>
-                            ))}
-                        </ul>
+                        <div className="category-donut-wrap">
+                            <svg
+                                className={`category-donut${selectedCategory ? " has-active-category" : ""}`}
+                                viewBox="0 0 120 120"
+                                role="img"
+                                aria-labelledby="category-donut-title category-donut-desc"
+                                onClick={(event) => {
+                                    const target = event.target;
+                                    if (
+                                        target instanceof SVGCircleElement &&
+                                        target.classList.contains("category-slice")
+                                    ) {
+                                        return;
+                                    }
+                                    setActiveCategory(null);
+                                    setHoverCategory(null);
+                                }}
+                            >
+                                <title id="category-donut-title">Pie chart kategori pengeluaran</title>
+                                <desc id="category-donut-desc">
+                                    Proporsi pengeluaran berdasarkan kategori.
+                                </desc>
+                                <circle className="category-donut-track" cx="60" cy="60" r="42" />
+                                {categoryDonut.map((item) => {
+                                    const label = categoryLabel(item.category);
+                                    const isSelected = selectedCategory?.category === item.category;
+                                    return (
+                                        <circle
+                                            key={item.category}
+                                            className={`${item.className}${isSelected ? " is-selected" : ""}`}
+                                            cx="60"
+                                            cy="60"
+                                            r="42"
+                                            pathLength="100"
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-label={`${label}: ${item.percent}% atau ${formatRupiah(item.amount)}`}
+                                            aria-pressed={activeCategory === item.category}
+                                            strokeDasharray={`${item.percent} ${100 - item.percent}`}
+                                            strokeDashoffset={item.offset}
+                                            onBlur={() => setHoverCategory(null)}
+                                            onClick={() => setActiveCategory(item.category)}
+                                            onFocus={() => setHoverCategory(item.category)}
+                                            onMouseEnter={() => setHoverCategory(item.category)}
+                                            onMouseLeave={() => setHoverCategory(null)}
+                                            onKeyDown={(event) => {
+                                                if (event.key === "Enter" || event.key === " ") {
+                                                    event.preventDefault();
+                                                    setActiveCategory(item.category);
+                                                }
+                                            }}
+                                        />
+                                    );
+                                })}
+                                {selectedCategory ? null : (
+                                    <text className="category-donut-label" x="60" y="56">
+                                        Total
+                                    </text>
+                                )}
+                                <text
+                                    className="category-donut-value"
+                                    x="60"
+                                    y={selectedCategory ? "66" : "73"}
+                                >
+                                    {selectedCategory
+                                        ? `${selectedCategory.percent}%`
+                                        : formatRupiah(data.summary.expense_total)}
+                                </text>
+                            </svg>
+                            {selectedCategory ? (
+                                <div className="category-active-detail" role="status">
+                                    <span>{categoryLabel(selectedCategory.category)}</span>
+                                    <strong>{formatRupiah(selectedCategory.amount)}</strong>
+                                    <small>{selectedCategory.percent}% dari pengeluaran</small>
+                                </div>
+                            ) : null}
+                            <ul className="category-legend" aria-label="Daftar kategori pengeluaran">
+                                {categoryDonut.map((item) => {
+                                    const label = categoryLabel(item.category);
+                                    const isSelected = selectedCategory?.category === item.category;
+                                    return (
+                                        <li key={item.category}>
+                                            <button
+                                                className={`category-legend-button${isSelected ? " is-selected" : ""}`}
+                                                type="button"
+                                                onClick={() => setActiveCategory(item.category)}
+                                            >
+                                                <span
+                                                    className={`category-legend-dot ${item.colorClassName}`}
+                                                    aria-hidden="true"
+                                                />
+                                                <span className="category-legend-name">{label}</span>
+                                                <strong>{item.percent}%</strong>
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
                     )}
                 </section>
 
                 <section className="dashboard-card" aria-labelledby="trend-title">
                     <h2 id="trend-title">Tren bulanan</h2>
+                    <p className="chart-legend" aria-hidden="true">
+                        <span className="legend-dot income-dot" /> Pemasukan
+                        <span className="legend-dot expense-dot" /> Pengeluaran
+                    </p>
                     <ul className="trend-list" aria-label="Tren pemasukan dan pengeluaran">
                         {data.trend.map((item) => (
                             <li key={item.month}>
@@ -218,21 +335,19 @@ export function DashboardOverview({
                                     <span
                                         className="income-bar"
                                         style={{
-                                            width: maxTrendAmount
-                                                ? `${(item.income_total / maxTrendAmount) * 100}%`
-                                                : "0%",
+                                            width: `${(item.income_total / maxTrendAmount) * 100}%`,
                                         }}
                                     />
                                     <span
                                         className="expense-bar"
                                         style={{
-                                            width: maxTrendAmount
-                                                ? `${(item.expense_total / maxTrendAmount) * 100}%`
-                                                : "0%",
+                                            width: `${(item.expense_total / maxTrendAmount) * 100}%`,
                                         }}
                                     />
                                 </div>
-                                <strong>{formatRupiah(item.net_cashflow)}</strong>
+                                <strong className={item.net_cashflow >= 0 ? "income" : "expense"}>
+                                    {formatRupiah(item.net_cashflow)}
+                                </strong>
                             </li>
                         ))}
                     </ul>
@@ -248,7 +363,7 @@ export function DashboardOverview({
                         {data.recentTransactions.map((transaction) => (
                             <li key={transaction.id}>
                                 <span>{transaction.name}</span>
-                                <strong>
+                                <strong className={transaction.type === "income" ? "income" : "expense"}>
                                     {transaction.type === "income" ? "+" : "-"}
                                     {formatRupiah(transaction.amount)}
                                 </strong>

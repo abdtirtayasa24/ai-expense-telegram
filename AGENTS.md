@@ -5,6 +5,8 @@ This document is the definitive guide for any AI coding agent (or human contribu
 - [README.md](README.md)
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - [docs/MVP_IMPLEMENTED.md](docs/MVP_IMPLEMENTED.md)
+- [PRODUCT.md](PRODUCT.md)
+- [DESIGN.md](DESIGN.md)
 
 ## Project Identity
 
@@ -86,6 +88,9 @@ frontend/src/
 - Token from local storage, sent via `Authorization: Bearer <jwt>` header.
 - All API calls go through typed helpers in `src/api/`.
 - No UI library — use existing CSS classes or add new ones to `styles.css`.
+- Follow `DESIGN.md`: mobile-first, premium/trustworthy/practical, restrained Telegram Blue accent, no purple AI slop, no flashy fintech styling.
+- Dashboard summary is compact on mobile; category breakdown uses an interactive dependency-free SVG donut; monthly trend uses compact horizontal bars.
+- Transactions list is mobile-first compact: type is shown with accessible symbols, short date labels (e.g. `27 Jun`), and edit/delete actions remain on the right.
 - Use `Intl.NumberFormat("id-ID")` for currency formatting.
 
 ### Repository Pattern

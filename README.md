@@ -2,7 +2,7 @@
 
 Private Indonesian-only expense tracker and budgeting advisor for Telegram Bot + Telegram Mini App.
 
-Users record expenses and income by chatting with a Telegram bot in Indonesian natural language. A React Telegram Mini App provides a full dashboard with monthly summaries, category breakdowns, trends, budget tracking, transaction management, and AI-powered budgeting advice.
+Users record expenses and income by chatting with a Telegram bot in Indonesian natural language. A React Telegram Mini App provides a mobile-first dashboard with monthly summaries, interactive category breakdowns, compact trends, budget tracking, transaction management, settings, and AI-powered budgeting advice.
 
 ## Tech Stack
 
@@ -48,11 +48,14 @@ ai-expense-telegram/
     ARCHITECTURE.md
     DEPLOYMENT.md
     MVP_IMPLEMENTED.md
+  PRODUCT.md           # Product/register strategy for design work
+  DESIGN.md            # Visual design system and UI guardrails
+  .impeccable/         # Impeccable live/design metadata
   frontend/
     src/
       api/              # auth, transactions, budgets, dashboard, advisor, settings
       assets/           # app logo
-      components/       # dashboard, page navigation, budget, advisor, settings, transaction panels/modals
+      components/       # dashboard charts, page navigation, budget, advisor, settings, transaction panels/modals
       utils/            # helper functions
       App.tsx
       main.tsx

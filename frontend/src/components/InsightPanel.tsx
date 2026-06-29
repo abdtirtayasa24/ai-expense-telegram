@@ -84,6 +84,13 @@ export function InsightPanel({
                 { role: "assistant", text: response.answer },
             ]);
         } catch (requestError) {
+            if (
+                axios.isAxiosError(requestError) &&
+                requestError.response?.status === 401
+            ) {
+                onUnauthorized("Sesi kamu sudah berakhir.");
+                return;
+            }
             setError(errorMessage(requestError));
         } finally {
             setIsSending(false);
@@ -94,8 +101,10 @@ export function InsightPanel({
         <section className="transactions-section" aria-labelledby="insights-title">
             <div className="section-header">
                 <div>
-                    <p className="eyebrow">AI Advisor</p>
                     <h2 id="insights-title">Insight keuangan</h2>
+                    <p className="section-description">
+                        Dapatkan ringkasan dan tanya saran cashflow berdasarkan data kamu.
+                    </p>
                 </div>
             </div>
 
@@ -148,11 +157,10 @@ export function InsightPanel({
                     </section>
                 </div>
             ) : error ? (
-                <div className="list-state" role="alert">
-                    {error}
+                <div className="list-state state-with-action" role="alert">
+                    <span>{error}</span>
                     <button
                         className="secondary-button small"
-                        style={{ marginLeft: 12 }}
                         type="button"
                         onClick={() => void loadInsight()}
                     >
@@ -181,9 +189,15 @@ export function InsightPanel({
                             </li>
                         ))}
                     </ul>
-                ) : null}
+                ) : (
+                    <p className="muted-text chat-empty">
+                        Mulai dengan pertanyaan praktis, misalnya cashflow bulan ini atau
+                        kategori yang perlu ditekan.
+                    </p>
+                )}
                 <form className="chat-form" onSubmit={handleChatSubmit}>
                     <input
+                        aria-label="Pertanyaan untuk AI Advisor"
                         value={chatMessage}
                         onChange={(event) => setChatMessage(event.target.value)}
                         placeholder="Contoh: Bagaimana cashflow saya bulan ini?"
@@ -194,7 +208,7 @@ export function InsightPanel({
                         disabled={isSending || !chatMessage.trim()}
                         type="submit"
                     >
-                        {isSending ? "..." : "Kirim"}
+                        {isSending ? "Mengirim" : "Kirim"}
                     </button>
                 </form>
             </section>

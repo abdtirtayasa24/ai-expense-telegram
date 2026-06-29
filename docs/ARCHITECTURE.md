@@ -331,10 +331,12 @@ API -> DB : read users.cashflow_period_start_day
 alt dashboard summary/categories/trend/recent
   API -> DB : paginate transactions for aggregation
   API -> App : monthly summary, category breakdown, trend, recent items
+  App -> App : render mobile-first summary, interactive category donut, compact trend bars
 else transaction page
   App -> API : GET /transactions?limit=10&offset=n
   API -> DB : list transactions by user_id, limit+1 for has_next
   API -> App : transaction page items + pagination metadata
+  App -> App : show compact mobile-first rows with right-side edit/delete actions
   App -> App : edit transaction in modal dialog
 else budget CRUD
   API -> DB : list/create/update/delete budgets by user_id and cashflow period start
@@ -598,12 +600,12 @@ Notes:
 ```text
 src/App.tsx                        Telegram auth bootstrap, page navigation, keep-alive cache
 src/api/*.ts                       Typed Axios API helpers, including settings
-src/components/DashboardOverview.tsx Summary, categories, trend, recent transactions
+src/components/DashboardOverview.tsx Summary, interactive category donut, compact trend bars, recent transactions
 src/components/PageMenu.tsx        Dashboard menu for Budget, AI Advisor, Transaksi, Pengaturan pages
 src/components/PageHeader.tsx      Shared page title/back navigation
 src/components/BudgetPanel.tsx     Budget CRUD and progress display
 src/components/InsightPanel.tsx    Advisor insights and chat UI
-src/components/TransactionsPanel.tsx Paginated transaction CRUD UI
+src/components/TransactionsPanel.tsx Paginated compact transaction CRUD UI
 src/components/EditTransactionModal.tsx Modal edit form for transactions
 src/components/SettingsPanel.tsx   Cashflow period setting UI
 src/utils/currency.ts              IDR formatting helper

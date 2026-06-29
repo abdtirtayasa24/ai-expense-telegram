@@ -62,6 +62,22 @@ function categoryLabel(category: string): string {
     return category.replace(/_/g, " ");
 }
 
+function shortDateLabel(date: string): string {
+    const [year, month, day] = date.split("-").map(Number);
+    return new Intl.DateTimeFormat("id-ID", {
+        day: "numeric",
+        month: "short",
+    }).format(new Date(year, month - 1, day));
+}
+
+function transactionTypeLabel(type: TransactionType): string {
+    return type === "income" ? "Pemasukan" : "Pengeluaran";
+}
+
+function transactionTypeSymbol(type: TransactionType): string {
+    return type === "income" ? "↗" : "↘";
+}
+
 export function TransactionsPanel({
     token,
     isActive,
@@ -207,8 +223,10 @@ export function TransactionsPanel({
         <section className="transactions-section" aria-labelledby="transactions-title">
             <div className="section-header">
                 <div>
-                    <p className="eyebrow">Transaksi</p>
                     <h2 id="transactions-title">Catatan manual</h2>
+                    <p className="section-description">
+                        Tambahkan atau koreksi transaksi yang tidak dicatat lewat bot.
+                    </p>
                 </div>
                 <div className="metric-card" aria-label="Total pengeluaran di halaman ini">
                     <span>Pengeluaran halaman ini</span>
@@ -276,7 +294,7 @@ export function TransactionsPanel({
                                     amount: Number(event.target.value),
                                 }))
                             }
-                            placeholder="5000"
+                            placeholder="Contoh: 5000"
                         />
                     </label>
                     <label>
@@ -329,7 +347,19 @@ export function TransactionsPanel({
                                 <div className="transaction-main">
                                     <strong>{transaction.name}</strong>
                                     <span className="transaction-meta">
-                                        {transaction.type === "income" ? "Pemasukan" : "Pengeluaran"} · {categoryLabel(transaction.category)} · {transaction.transaction_date}
+                                        <span className="transaction-meta-main">
+                                            <span
+                                                className={`transaction-type-symbol ${transaction.type}`}
+                                                aria-label={transactionTypeLabel(transaction.type)}
+                                                title={transactionTypeLabel(transaction.type)}
+                                            >
+                                                {transactionTypeSymbol(transaction.type)}
+                                            </span>
+                                            <span>{categoryLabel(transaction.category)}</span>
+                                        </span>
+                                        <time dateTime={transaction.transaction_date}>
+                                            {shortDateLabel(transaction.transaction_date)}
+                                        </time>
                                     </span>
                                 </div>
                                 <div className="transaction-actions">
@@ -340,6 +370,7 @@ export function TransactionsPanel({
                                     <button
                                         type="button"
                                         className="secondary-button small"
+                                        aria-label={`Edit transaksi ${transaction.name}`}
                                         onClick={() => setEditingTransaction(transaction)}
                                     >
                                         Edit
@@ -347,6 +378,7 @@ export function TransactionsPanel({
                                     <button
                                         type="button"
                                         className="danger-button small"
+                                        aria-label={`Hapus transaksi ${transaction.name}`}
                                         onClick={() => void handleDelete(transaction.id)}
                                     >
                                         Hapus

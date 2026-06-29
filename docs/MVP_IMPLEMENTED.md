@@ -234,17 +234,18 @@ Goal: Manage transactions from Mini App.
 
 - Implement transaction API endpoints.
 - Implement frontend transaction list.
+- Implement mobile-first compact transaction rows.
 - Implement manual transaction form.
 - Implement edit/delete.
 - Enforce user ownership.
 
 ### Delivered
 
-- User can manage transactions from dashboard.
+- User can manage transactions from dashboard with compact mobile-friendly rows and right-side actions.
 
 ### Acceptance Criteria
 
-- User can list own transactions.
+- User can list own transactions with pagination.
 - User can create manual transaction.
 - User can edit transaction.
 - User can delete transaction.
@@ -263,18 +264,19 @@ Goal: Show financial summary.
 - Implement monthly trend aggregation.
 - Implement recent transactions endpoint.
 - Build dashboard components.
+- Add mobile-first summary layout, interactive category donut, and compact trend bars.
 
 ### Delivered
 
-- Mini App dashboard shows user's financial overview.
+- Mini App dashboard shows user's financial overview with mobile-first summary, category, trend, and recent transaction sections.
 
 ### Acceptance Criteria
 
 - Dashboard shows monthly income.
 - Dashboard shows monthly expenses.
 - Dashboard shows net cashflow.
-- Dashboard shows category breakdown.
-- Dashboard shows monthly trend.
+- Dashboard shows category breakdown as an interactive donut chart.
+- Dashboard shows monthly trend as compact horizontal bars.
 - Dashboard shows recent transactions.
 
 ---

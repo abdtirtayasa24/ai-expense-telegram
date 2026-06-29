@@ -141,8 +141,10 @@ export function BudgetPanel({
         <section className="transactions-section" aria-labelledby="budgets-title">
             <div className="section-header">
                 <div>
-                    <p className="eyebrow">Budget</p>
                     <h2 id="budgets-title">Batas pengeluaran bulanan</h2>
+                    <p className="section-description">
+                        Tetapkan batas per kategori dan pantau sisa ruang belanja periode ini.
+                    </p>
                 </div>
             </div>
 
@@ -181,7 +183,7 @@ export function BudgetPanel({
                                     monthly_limit: Number(event.target.value),
                                 }))
                             }
-                            placeholder="100000"
+                            placeholder="Contoh: 100000"
                         />
                     </label>
                 </div>
@@ -235,18 +237,25 @@ export function BudgetPanel({
                                         {formatRupiah(budget.actual)} · Sisa{" "}
                                         {formatRupiah(budget.remaining)}
                                     </span>
+                                    <div
+                                        className="progress-track budget-progress"
+                                        aria-label={`Budget ${categoryLabel(budget.category)} terpakai ${budget.percent_used}%`}
+                                        role="img"
+                                    >
+                                        <span
+                                            className={isOver ? "expense-bar" : "income-bar"}
+                                            style={{ width: `${Math.min(budget.percent_used, 100)}%` }}
+                                        />
+                                    </div>
                                 </div>
                                 <div className="transaction-actions">
-                                    <span
-                                        className={
-                                            isOver ? "expense" : "income"
-                                        }
-                                    >
-                                        {budget.percent_used}%
+                                    <span className={isOver ? "expense" : "income"}>
+                                        {isOver ? "Lewat batas" : "Terpakai"} {budget.percent_used}%
                                     </span>
                                     <button
                                         type="button"
                                         className="secondary-button small"
+                                        aria-label={`Edit budget ${categoryLabel(budget.category)}`}
                                         onClick={() => {
                                             setEditingId(budget.id);
                                             setForm({
@@ -260,6 +269,7 @@ export function BudgetPanel({
                                     <button
                                         type="button"
                                         className="danger-button small"
+                                        aria-label={`Hapus budget ${categoryLabel(budget.category)}`}
                                         onClick={() => void handleDelete(budget.id)}
                                     >
                                         Hapus
