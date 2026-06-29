@@ -371,9 +371,14 @@ API -> API : validate JWT and current user state
 alt /advisor/insights
   API -> Advisor : build current-month context
   Advisor -> DB : paginate transactions and read budgets
-  Advisor -> Gemini : structured monthly report request
-  Gemini --> Advisor : summary, recommendations, warnings
-  Advisor -> DB : insert advisor_insights
+  API -> DB : lookup advisor_insights by period + context_hash
+  alt cached insight exists
+    DB --> API : cached structured result
+  else cache miss
+    Advisor -> Gemini : structured monthly report request
+    Gemini --> Advisor : summary, recommendations, warnings
+    API -> DB : insert advisor_insights result + context_hash
+  end
   API -> App : InsightsResponse
 else /advisor/chat
   API -> Chat : answer advisor question
@@ -678,6 +683,8 @@ entity advisor_insights {
   period_end : date
   insight_type : text
   summary : text
+  result : jsonb
+  context_hash : text
   generated_by : text
   created_at : timestamptz
 }

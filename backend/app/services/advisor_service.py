@@ -1,3 +1,4 @@
+import hashlib
 import json
 from datetime import date, datetime
 from decimal import Decimal
@@ -37,6 +38,16 @@ DAILY_OR_VARIABLE_EXPENSE_CATEGORIES = {
 
 _SYSTEM_INSTRUCTION = load_prompt("advisor_chat.md")
 _INSIGHTS_INSTRUCTION = load_prompt("advisor_insights.md")
+
+
+def advisor_context_hash(context: dict[str, Any]) -> str:
+    payload = json.dumps(
+        context,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def _period_key(period_start: datetime, start_day: int) -> str:

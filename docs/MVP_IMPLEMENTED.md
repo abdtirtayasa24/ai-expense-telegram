@@ -315,7 +315,7 @@ Goal: Provide budgeting and cashflow advice.
 - Implement financial data aggregation.
 - Implement advisor prompt.
 - Implement advisor guardrails.
-- Implement `/advisor/insights`.
+- Implement `/advisor/insights` with Supabase-backed cache for unchanged advisor context.
 - Implement `/advisor/chat`.
 - Implement Insights page.
 - Add tests for restricted advice.

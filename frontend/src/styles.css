@@ -636,23 +636,45 @@ dd {
     padding: 0;
 }
 
-.chat-user span,
-.chat-assistant span {
+.chat-bubble {
     display: block;
     border-radius: var(--radius-message);
     padding: var(--space-md) var(--space-lg);
     line-height: 1.6;
 }
 
-.chat-user span {
+.chat-user .chat-bubble {
     background: var(--color-blue-tint);
     color: var(--color-body-ink);
     text-align: right;
 }
 
-.chat-assistant span {
+.chat-assistant .chat-bubble {
     background: var(--color-surface-muted);
     color: var(--color-muted-ink);
+}
+
+.advisor-formatted-text {
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.advisor-formatted-text p,
+.advisor-formatted-text ul,
+.advisor-formatted-text ol {
+    margin: 0;
+}
+
+.advisor-formatted-text ul,
+.advisor-formatted-text ol {
+    display: grid;
+    gap: 6px;
+    padding-inline-start: var(--space-lg);
+}
+
+.advisor-formatted-text strong {
+    color: var(--color-ledger-ink);
+    font-weight: 700;
 }
 
 .chat-empty {

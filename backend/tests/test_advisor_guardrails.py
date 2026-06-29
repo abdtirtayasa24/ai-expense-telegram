@@ -3,11 +3,22 @@ supported advice is answered with user-data grounding."""
 
 from datetime import date
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi.testclient import TestClient
 
+from app.api.dependencies import (
+    get_budgets_repository,
+    get_current_user,
+    get_insights_repository,
+    get_settings,
+    get_transactions_repository,
+)
+from app.main import app
 from app.repositories.budgets_repository import BudgetsRepository
+from app.repositories.insights_repository import InsightsRepository
 from app.repositories.transactions_repository import TransactionsRepository
 from app.services.advisor_service import (
     _SYSTEM_INSTRUCTION,
@@ -18,6 +29,14 @@ from app.services.advisor_service import (
 from tests.test_repositories import FakeSupabaseClient
 
 pytestmark = pytest.mark.asyncio
+
+_CURRENT_USER = {
+    "id": "user-1",
+    "telegram_user_id": 111,
+    "role": "user",
+    "status": "active",
+    "onboarding_status": "completed",
+}
 
 _FAKE_ENV = {
     "APP_BASE_URL": "https://api.example.com",
@@ -60,6 +79,10 @@ _EMPTY_CONTEXT = {
 }
 
 
+def clear_overrides() -> None:
+    app.dependency_overrides.clear()
+
+
 def seed_transaction(repository: TransactionsRepository) -> None:
     repository.create(
         user_id="user-1",
@@ -81,6 +104,130 @@ def seed_transaction(repository: TransactionsRepository) -> None:
         source="manual",
         parser="manual",
     )
+
+
+@patch.dict("os.environ", _FAKE_ENV)
+@patch("google.genai.Client")
+async def test_advisor_insights_reuses_cached_result_for_same_context(
+    mock_client_cls: MagicMock,
+) -> None:
+    supabase = FakeSupabaseClient()
+    transactions = TransactionsRepository(supabase)
+    budgets = BudgetsRepository(supabase)
+    insights = InsightsRepository(supabase)
+    seed_transaction(transactions)
+
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.parsed = {
+        "summary": "Surplus masih sementara.",
+        "recommendations": ["Pantau pengeluaran harian."],
+        "warnings": ["Periode masih berjalan."],
+    }
+    mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+    mock_client_cls.return_value = mock_client
+
+    app.dependency_overrides[get_current_user] = lambda: _CURRENT_USER
+    app.dependency_overrides[get_settings] = lambda: SimpleNamespace(
+        gemini_api_key="test-key",
+        gemini_model="test-model",
+    )
+    app.dependency_overrides[get_transactions_repository] = lambda: transactions
+    app.dependency_overrides[get_budgets_repository] = lambda: budgets
+    app.dependency_overrides[get_insights_repository] = lambda: insights
+
+    with patch(
+        "app.services.advisor_service.current_cashflow_period",
+        return_value=(date(2026, 6, 1), date(2026, 7, 1)),
+    ), patch(
+        "app.services.advisor_service.today_jakarta",
+        return_value=date(2026, 6, 29),
+    ):
+        client = TestClient(app)
+        try:
+            first_response = client.post("/advisor/insights")
+            second_response = client.post("/advisor/insights")
+        finally:
+            clear_overrides()
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+    assert first_response.json() == second_response.json()
+    assert first_response.json() == {
+        "summary": "Surplus masih sementara.",
+        "recommendations": ["Pantau pengeluaran harian."],
+        "warnings": ["Periode masih berjalan."],
+    }
+    assert mock_client.aio.models.generate_content.await_count == 1
+
+
+@patch.dict("os.environ", _FAKE_ENV)
+@patch("google.genai.Client")
+async def test_advisor_insights_regenerates_after_financial_data_changes(
+    mock_client_cls: MagicMock,
+) -> None:
+    supabase = FakeSupabaseClient()
+    transactions = TransactionsRepository(supabase)
+    budgets = BudgetsRepository(supabase)
+    insights = InsightsRepository(supabase)
+    seed_transaction(transactions)
+
+    mock_client = MagicMock()
+    first_response = MagicMock()
+    first_response.parsed = {
+        "summary": "Insight awal.",
+        "recommendations": ["Pantau pengeluaran."],
+        "warnings": [],
+    }
+    second_response = MagicMock()
+    second_response.parsed = {
+        "summary": "Insight setelah data berubah.",
+        "recommendations": ["Kurangi makan di luar."],
+        "warnings": ["Pengeluaran bertambah."],
+    }
+    mock_client.aio.models.generate_content = AsyncMock(
+        side_effect=[first_response, second_response],
+    )
+    mock_client_cls.return_value = mock_client
+
+    app.dependency_overrides[get_current_user] = lambda: _CURRENT_USER
+    app.dependency_overrides[get_settings] = lambda: SimpleNamespace(
+        gemini_api_key="test-key",
+        gemini_model="test-model",
+    )
+    app.dependency_overrides[get_transactions_repository] = lambda: transactions
+    app.dependency_overrides[get_budgets_repository] = lambda: budgets
+    app.dependency_overrides[get_insights_repository] = lambda: insights
+
+    with patch(
+        "app.services.advisor_service.current_cashflow_period",
+        return_value=(date(2026, 6, 1), date(2026, 7, 1)),
+    ), patch(
+        "app.services.advisor_service.today_jakarta",
+        return_value=date(2026, 6, 29),
+    ):
+        client = TestClient(app)
+        try:
+            first = client.post("/advisor/insights")
+            transactions.create(
+                user_id="user-1",
+                transaction_type="expense",
+                name="Makan",
+                category="makanan_minuman",
+                amount=Decimal("25000"),
+                transaction_date=date(2026, 6, 29),
+                source="manual",
+                parser="manual",
+            )
+            second = client.post("/advisor/insights")
+        finally:
+            clear_overrides()
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json()["summary"] == "Insight awal."
+    assert second.json()["summary"] == "Insight setelah data berubah."
+    assert mock_client.aio.models.generate_content.await_count == 2
 
 
 @patch.dict("os.environ", _FAKE_ENV)

@@ -7,6 +7,7 @@ from app.api.dependencies import (
     get_advisor_chat_repository,
     get_budgets_repository,
     get_current_user,
+    get_insights_repository,
     get_settings,
     get_transactions_repository,
 )
@@ -18,6 +19,7 @@ from app.repositories.transactions_repository import TransactionsRepository
 from app.schemas.advisor import ChatRequest, ChatResponse, InsightsResponse
 from app.services.advisor_chat_service import answer_advisor_question
 from app.services.advisor_service import (
+    advisor_context_hash,
     build_advisor_context,
     generate_insights,
 )
@@ -38,6 +40,10 @@ async def advisor_insights(
         BudgetsRepository,
         Depends(get_budgets_repository),
     ],
+    insights_repository: Annotated[
+        InsightsRepository,
+        Depends(get_insights_repository),
+    ],
 ) -> InsightsResponse:
     context = build_advisor_context(
         current_user["id"],
@@ -45,6 +51,24 @@ async def advisor_insights(
         budgets_repository,
         cashflow_period_start_day=user_cashflow_start_day(current_user),
     )
+    period_start = date.fromisoformat(context["period_start"])
+    period_end = date.fromisoformat(context["period_end"])
+    context_hash = advisor_context_hash(context)
+    cached = insights_repository.get_cached_for_context(
+        user_id=current_user["id"],
+        period_start=period_start,
+        period_end=period_end,
+        insight_type="monthly_insights",
+        context_hash=context_hash,
+    )
+    if cached is not None and isinstance(cached.get("result"), dict):
+        result = cached["result"]
+        return InsightsResponse(
+            summary=str(result.get("summary", cached["summary"])),
+            recommendations=list(result.get("recommendations", [])),
+            warnings=list(result.get("warnings", [])),
+        )
+
     try:
         result = await generate_insights(
             context,
@@ -58,13 +82,18 @@ async def advisor_insights(
             warnings=[],
         )
 
-    insights_repo = InsightsRepository()
-    insights_repo.create(
+    insights_repository.create(
         user_id=current_user["id"],
-        period_start=date.fromisoformat(context["period_start"]),
-        period_end=date.fromisoformat(context["period_end"]),
+        period_start=period_start,
+        period_end=period_end,
         insight_type="monthly_insights",
         summary=result["summary"],
+        result={
+            "summary": result["summary"],
+            "recommendations": result.get("recommendations", []),
+            "warnings": result.get("warnings", []),
+        },
+        context_hash=context_hash,
     )
     return InsightsResponse(
         summary=result["summary"],

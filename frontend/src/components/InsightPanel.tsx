@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 import axios from "axios";
 
 import {
@@ -14,6 +14,11 @@ interface InsightPanelProps {
     onUnauthorized: (message: string) => void;
 }
 
+type AdvisorTextBlock =
+    | { type: "paragraph"; text: string }
+    | { type: "unordered-list"; items: string[] }
+    | { type: "ordered-list"; items: string[] };
+
 function errorMessage(error: unknown): string {
     if (axios.isAxiosError(error)) {
         const detail = error.response?.data?.detail;
@@ -22,6 +27,106 @@ function errorMessage(error: unknown): string {
         }
     }
     return "Insight belum bisa dimuat. Coba lagi sebentar.";
+}
+
+function parseAdvisorText(text: string): AdvisorTextBlock[] {
+    const blocks: AdvisorTextBlock[] = [];
+    let paragraphLines: string[] = [];
+    let listBlock: Extract<AdvisorTextBlock, { items: string[] }> | null = null;
+
+    const flushParagraph = () => {
+        if (paragraphLines.length === 0) {
+            return;
+        }
+        blocks.push({ type: "paragraph", text: paragraphLines.join(" ") });
+        paragraphLines = [];
+    };
+
+    const flushList = () => {
+        if (listBlock === null) {
+            return;
+        }
+        blocks.push(listBlock);
+        listBlock = null;
+    };
+
+    for (const rawLine of text.replace(/\r\n/g, "\n").split("\n")) {
+        const line = rawLine.trim();
+        if (!line) {
+            flushParagraph();
+            flushList();
+            continue;
+        }
+
+        const unorderedMatch = line.match(/^[-*•]\s+(.+)$/);
+        const orderedMatch = line.match(/^\d+[.)]\s+(.+)$/);
+
+        if (unorderedMatch !== null) {
+            flushParagraph();
+            if (listBlock?.type !== "unordered-list") {
+                flushList();
+                listBlock = { type: "unordered-list", items: [] };
+            }
+            listBlock.items.push(unorderedMatch[1]);
+            continue;
+        }
+
+        if (orderedMatch !== null) {
+            flushParagraph();
+            if (listBlock?.type !== "ordered-list") {
+                flushList();
+                listBlock = { type: "ordered-list", items: [] };
+            }
+            listBlock.items.push(orderedMatch[1]);
+            continue;
+        }
+
+        flushList();
+        paragraphLines.push(line);
+    }
+
+    flushParagraph();
+    flushList();
+
+    return blocks.length > 0 ? blocks : [{ type: "paragraph", text }];
+}
+
+function renderInlineText(text: string): ReactNode[] {
+    return text
+        .split(/(\*\*[^*]+\*\*)/g)
+        .filter(Boolean)
+        .map((segment, index) => {
+            if (segment.startsWith("**") && segment.endsWith("**")) {
+                return <strong key={index}>{segment.slice(2, -2)}</strong>;
+            }
+            return segment;
+        });
+}
+
+function FormattedAdvisorText({ text }: { text: string }) {
+    return parseAdvisorText(text).map((block, index) => {
+        if (block.type === "unordered-list") {
+            return (
+                <ul key={index}>
+                    {block.items.map((item, itemIndex) => (
+                        <li key={itemIndex}>{renderInlineText(item)}</li>
+                    ))}
+                </ul>
+            );
+        }
+
+        if (block.type === "ordered-list") {
+            return (
+                <ol key={index}>
+                    {block.items.map((item, itemIndex) => (
+                        <li key={itemIndex}>{renderInlineText(item)}</li>
+                    ))}
+                </ol>
+            );
+        }
+
+        return <p key={index}>{renderInlineText(block.text)}</p>;
+    });
 }
 
 export function InsightPanel({
@@ -185,7 +290,13 @@ export function InsightPanel({
                                         : "chat-assistant"
                                 }
                             >
-                                <span>{msg.text}</span>
+                                {msg.role === "user" ? (
+                                    <span className="chat-bubble">{msg.text}</span>
+                                ) : (
+                                    <div className="chat-bubble advisor-formatted-text">
+                                        <FormattedAdvisorText text={msg.text} />
+                                    </div>
+                                )}
                             </li>
                         ))}
                     </ul>

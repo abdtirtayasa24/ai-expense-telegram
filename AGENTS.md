@@ -203,7 +203,7 @@ class SomeRepository(BaseRepository):
 - `users`: PK uuid, unique `telegram_user_id`, `status` (active/inactive), `onboarding_status` (pending/asking_first_name/asking_last_name/completed), `cashflow_period_start_day` (1-31).
 - `transactions`: PK uuid, FK to users, `type` (income/expense), `category` (12 fixed values), `amount` numeric(14,2) > 0, `parser` (rule_based/gemini/manual), `source` (telegram_chat/manual).
 - `budgets`: PK uuid, FK to users, unique(user_id, category, month), `monthly_limit` > 0.
-- `advisor_insights`: PK uuid, FK to users, `insight_type`, `summary`.
+- `advisor_insights`: PK uuid, FK to users, `insight_type`, `summary`, `result`, `context_hash` for Supabase-backed Gemini insight caching.
 - `conversation_states`: PK uuid, FK to users, `state`, `payload` jsonb, `expires_at`.
 - `advisor_chat_messages`: PK uuid, FK to users, `role`, `content`, `source`, `metadata`, `created_at`.
 - See [docs/ARCHITECTURE.md#data-model](docs/ARCHITECTURE.md#data-model) for the full current data model, constraints, indexes, triggers, and RPCs.
