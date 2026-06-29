@@ -176,10 +176,11 @@ SLANG_AMOUNT_VALUES: dict[str, Decimal] = {
     "satu juta": Decimal("1000000"),
     "setengah juta": Decimal("500000"),
 }
+_slang_pattern = "|".join(
+    re.escape(phrase) for phrase in sorted(SLANG_AMOUNT_VALUES, key=len, reverse=True)
+)
 SLANG_AMOUNT_PATTERN = re.compile(
-    r"(?<![a-z0-9])("
-    + "|".join(re.escape(phrase) for phrase in sorted(SLANG_AMOUNT_VALUES, key=len, reverse=True))
-    + r")(?![a-z0-9])",
+    rf"(?<![a-z0-9])({_slang_pattern})(?![a-z0-9])",
     re.IGNORECASE,
 )
 
@@ -397,7 +398,9 @@ def is_probably_date_number(text: str, match: re.Match[str]) -> bool:
     before = text[max(0, start - 12) : start]
     after = text[end : min(len(text), end + 16)]
 
-    if (start > 0 and text[start - 1] in {"/", "-"}) or (end < len(text) and text[end : end + 1] in {"/", "-"}):
+    has_sep_before = start > 0 and text[start - 1] in {"/", "-"}
+    has_sep_after = end < len(text) and text[end : end + 1] in {"/", "-"}
+    if has_sep_before or has_sep_after:
         return True
 
     if re.search(r"(?:tgl|tanggal)\s*$", before):
@@ -442,7 +445,10 @@ def detect_transaction_type(text: str) -> TransactionType | None:
     return None
 
 
-def collect_signal_matches(text: str, signals: tuple[str, ...]) -> list[tuple[str, int]]:
+def collect_signal_matches(
+    text: str,
+    signals: tuple[str, ...],
+) -> list[tuple[str, int]]:
     matches: list[tuple[str, int]] = []
     for signal in signals:
         match = find_keyword(text, signal)
@@ -525,8 +531,12 @@ def extract_name(text: str) -> str:
         _, start, end = amount_candidate
         name = f"{name[:start]} {name[end:]}"
 
-    for signal in sorted((*INCOME_SIGNALS, *EXPENSE_SIGNALS), key=len, reverse=True):
-        name = re.sub(rf"(?<![a-z0-9]){re.escape(signal.strip())}(?![a-z0-9])", " ", name)
+    all_signals = sorted((*INCOME_SIGNALS, *EXPENSE_SIGNALS), key=len, reverse=True)
+    word_boundary = r"(?<![a-z0-9])"
+    for signal in all_signals:
+        escaped = re.escape(signal.strip())
+        pattern = f"{word_boundary}{escaped}{word_boundary}"
+        name = re.sub(pattern, " ", name)
 
     name = WHITESPACE_PATTERN.sub(" ", name).strip(" -.,")
     return name.title()
@@ -537,7 +547,9 @@ def build_clarification(
     transaction_type: TransactionType | None,
 ) -> tuple[bool, str | None]:
     if amount is None:
-        return True, "Nominalnya belum terbaca. Contoh: Bayar parkir 5000 atau Bayar paylater 250rb"
+        msg = "Nominalnya belum terbaca. "
+        examples = "Contoh: Bayar parkir 5000 atau Bayar paylater 250rb"
+        return True, f"{msg}{examples}"
     if transaction_type is None:
         return (
             True,
