@@ -14,7 +14,7 @@ The product is a private Indonesian personal finance tracker combining Telegram 
 
 ## Brand Personality
 
-Premium, trustworthy, practical. The interface should feel calm and well-made, with enough polish to inspire confidence but not so much decoration that it distracts from personal finance tasks. The voice should stay clear, helpful, and Indonesian-first.
+Premium, trustworthy, practical. The interface should feel calm and well-made, with enough polish to inspire confidence but not so much decoration that it distracts from personal finance tasks. The Mini App visual direction uses a Telegram dark-mode base with restrained Telegram Blue accents, while AI Advisor text should feel readable and practical like a Claude-style note. The voice should stay clear, helpful, and Indonesian-first.
 
 ## Anti-references
 

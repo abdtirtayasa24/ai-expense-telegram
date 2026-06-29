@@ -7,121 +7,106 @@
       "telegram-blue": {
         "role": "primary",
         "displayName": "Telegram Blue",
-        "canonical": "#2374e1",
+        "canonical": "#3390ec",
         "tonalRamp": [
-          "oklch(18% 0.08 255)",
-          "oklch(28% 0.12 255)",
-          "oklch(40% 0.16 255)",
-          "oklch(52% 0.18 255)",
-          "oklch(63% 0.17 255)",
-          "oklch(74% 0.12 255)",
-          "oklch(86% 0.06 255)",
-          "oklch(95% 0.025 255)"
+          "#0f1720",
+          "#17212b",
+          "#203a56",
+          "#2b5278",
+          "#3390ec",
+          "#62b0ff",
+          "#a7d4ff",
+          "#e7f3ff"
         ]
       },
       "telegram-blue-strong": {
         "role": "primary",
         "displayName": "Telegram Blue Strong",
-        "canonical": "#1859ad",
+        "canonical": "#62b0ff",
         "tonalRamp": [
-          "#0f172a",
-          "#123f80",
-          "#1859ad",
-          "#2374e1",
-          "#6fa9f4",
-          "#bfd5f5",
-          "#edf4ff",
-          "#fbfdff"
+          "#0f1720",
+          "#17212b",
+          "#203a56",
+          "#2b5278",
+          "#3390ec",
+          "#62b0ff",
+          "#a7d4ff",
+          "#e7f3ff"
         ]
       },
       "telegram-blue-soft": {
         "role": "primary",
         "displayName": "Telegram Blue Soft",
-        "canonical": "#bfd5f5",
+        "canonical": "#40698f",
         "tonalRamp": [
-          "#0f172a",
-          "#1859ad",
-          "#2374e1",
-          "#7fb2f0",
-          "#bfd5f5",
-          "#dce5f2",
-          "#edf4ff",
-          "#fbfdff"
+          "#0f1720",
+          "#17212b",
+          "#203a56",
+          "#334457",
+          "#40698f",
+          "#62b0ff",
+          "#a7d4ff",
+          "#e7f3ff"
         ]
       },
       "ledger-ink": {
         "role": "neutral",
         "displayName": "Ledger Ink",
-        "canonical": "#0f172a",
+        "canonical": "#f5f8fc",
         "tonalRamp": [
-          "#0f172a",
-          "#172033",
-          "#263448",
-          "#3d4d63",
-          "#526173",
-          "#6b7b91",
-          "#a7b4c3",
-          "#f4f7fb"
-        ]
-      },
-      "cool-porcelain": {
-        "role": "neutral",
-        "displayName": "Cool Porcelain",
-        "canonical": "#f4f7fb",
-        "tonalRamp": [
-          "oklch(20% 0.012 255)",
-          "oklch(32% 0.014 255)",
-          "oklch(45% 0.014 255)",
-          "oklch(60% 0.012 255)",
-          "oklch(74% 0.01 255)",
-          "oklch(86% 0.008 255)",
-          "oklch(94% 0.006 255)",
-          "#f4f7fb"
+          "#0f1720",
+          "#17212b",
+          "#1e2a36",
+          "#23313f",
+          "#334457",
+          "#7f91a6",
+          "#dbe5f1",
+          "#f5f8fc"
         ]
       },
       "surface": {
         "role": "neutral",
-        "displayName": "Surface White",
-        "canonical": "#ffffff",
+        "displayName": "Surface",
+        "canonical": "#1e2a36",
         "tonalRamp": [
-          "#0f172a",
-          "#526173",
-          "#6b7b91",
-          "#cfd9e8",
-          "#dce5f2",
-          "#e5edf7",
-          "#fbfdff",
-          "#ffffff"
+          "#0f1720",
+          "#111922",
+          "#17212b",
+          "#1e2a36",
+          "#23313f",
+          "#334457",
+          "#a8b6c7",
+          "#f5f8fc"
         ]
       },
       "success": {
         "role": "tertiary",
         "displayName": "Success Green",
-        "canonical": "#087443",
+        "canonical": "#8ee6b3",
         "tonalRamp": [
-          "oklch(18% 0.07 155)",
-          "oklch(28% 0.10 155)",
-          "#087443",
-          "#12b76a",
-          "oklch(68% 0.13 155)",
-          "oklch(78% 0.09 155)",
-          "oklch(88% 0.05 155)",
-          "oklch(96% 0.02 155)"
+          "#10251b",
+          "#173626",
+          "#1f5437",
+          "#2b7a4d",
+          "#3ed47f",
+          "#8ee6b3",
+          "#c7f7dc",
+          "#effdf5"
         ]
       },
       "danger": {
         "role": "tertiary",
         "displayName": "Danger Red",
-        "canonical": "#b42318",
+        "canonical": "#ff9a91",
         "tonalRamp": [
-          "oklch(18% 0.08 28)",
-          "oklch(30% 0.12 28)",
-          "#b42318",
-          "#f04438",
-          "oklch(70% 0.14 28)",
-          "#fecaca",
-          "#fff1f1",
-          "#fff7f7"
+          "#2c171c",
+          "#3b2429",
+          "#70414a",
+          "#a84f55",
+          "#ff6b61",
+          "#ff9a91",
+          "#ffd0cb",
+          "#fff0ee"
         ]
       },
       "chart-blue": {
@@ -195,6 +180,21 @@
           "oklch(74% 0.12 285)",
           "oklch(92% 0.12 285)"
         ]
+      },
+      "telegram-night": {
+        "role": "neutral",
+        "displayName": "Telegram Night",
+        "canonical": "#17212b",
+        "tonalRamp": [
+          "#0f1720",
+          "#111922",
+          "#17212b",
+          "#1e2a36",
+          "#23313f",
+          "#334457",
+          "#a8b6c7",
+          "#f5f8fc"
+        ]
       }
     },
     "typographyMeta": {
@@ -266,7 +266,7 @@
       "refersTo": "button-primary",
       "description": "The single decisive action in a form, chat composer, or retry flow.",
       "html": "<button class=\"ds-btn-primary\" type=\"button\">Tambah budget</button>",
-      "css": ".ds-btn-primary { border: 0; border-radius: 999px; background: #2374e1; color: #ffffff; cursor: pointer; font: 700 1rem/1.2 Inter, ui-sans-serif, system-ui, sans-serif; padding: 10px 16px; transition: transform 150ms ease-out, background-color 150ms ease-out; } .ds-btn-primary:hover { background: #1859ad; transform: translateY(-1px); } .ds-btn-primary:focus-visible { outline: 3px solid rgb(35 116 225 / 28%); outline-offset: 2px; } .ds-btn-primary:active { transform: translateY(0); }"
+      "css": ".ds-btn-primary { border: 0; border-radius: 999px; background: #3390ec; color: #f8fbff; cursor: pointer; font: 700 1rem/1.2 Inter, ui-sans-serif, system-ui, sans-serif; padding: 10px 16px; transition: transform 150ms ease-out, background-color 150ms ease-out; } .ds-btn-primary:hover { background: color-mix(in srgb, #3390ec 86%, white); transform: translateY(-1px); } .ds-btn-primary:focus-visible { outline: 3px solid rgb(51 144 236 / 34%); outline-offset: 2px; } .ds-btn-primary:active { transform: translateY(0); }"
     },
     {
       "name": "Secondary Button",
@@ -274,7 +274,7 @@
       "refersTo": "button-secondary",
       "description": "Quiet navigation, retry, cancel, and pagination action.",
       "html": "<button class=\"ds-btn-secondary\" type=\"button\">\u2190 Dashboard</button>",
-      "css": ".ds-btn-secondary { border: 0; border-radius: 999px; background: #edf4ff; color: #1859ad; cursor: pointer; font: 700 0.85rem/1.2 Inter, ui-sans-serif, system-ui, sans-serif; padding: 7px 12px; transition: background-color 150ms ease-out, transform 150ms ease-out; } .ds-btn-secondary:hover { background: #dcecff; transform: translateY(-1px); } .ds-btn-secondary:focus-visible { outline: 3px solid rgb(35 116 225 / 28%); outline-offset: 2px; }"
+      "css": ".ds-btn-secondary { border: 1px solid #2b3a4a; border-radius: 999px; background: #203a56; color: #62b0ff; cursor: pointer; font: 700 0.85rem/1.2 Inter, ui-sans-serif, system-ui, sans-serif; padding: 7px 12px; transition: background-color 150ms ease-out, transform 150ms ease-out; } .ds-btn-secondary:hover { background: color-mix(in srgb, #203a56 72%, #1e2a36); transform: translateY(-1px); } .ds-btn-secondary:focus-visible { outline: 3px solid rgb(51 144 236 / 34%); outline-offset: 2px; }"
     },
     {
       "name": "Danger Button",
@@ -282,7 +282,7 @@
       "refersTo": "button-danger",
       "description": "Destructive action with tinted background instead of loud full-red fill.",
       "html": "<button class=\"ds-btn-danger\" type=\"button\">Hapus</button>",
-      "css": ".ds-btn-danger { border: 0; border-radius: 999px; background: #fff1f1; color: #b42318; cursor: pointer; font: 700 0.85rem/1.2 Inter, ui-sans-serif, system-ui, sans-serif; padding: 7px 12px; transition: background-color 150ms ease-out, transform 150ms ease-out; } .ds-btn-danger:hover { background: #ffe2e2; transform: translateY(-1px); } .ds-btn-danger:focus-visible { outline: 3px solid rgb(180 35 24 / 22%); outline-offset: 2px; }"
+      "css": ".ds-btn-danger { border: 1px solid #70414a; border-radius: 999px; background: #3b2429; color: #ff9a91; cursor: pointer; font: 700 0.85rem/1.2 Inter, ui-sans-serif, system-ui, sans-serif; padding: 7px 12px; transition: background-color 150ms ease-out, transform 150ms ease-out; } .ds-btn-danger:hover { background: color-mix(in srgb, #3b2429 72%, #70414a); transform: translateY(-1px); } .ds-btn-danger:focus-visible { outline: 3px solid rgb(255 154 145 / 28%); outline-offset: 2px; }"
     },
     {
       "name": "Input Field",
@@ -290,7 +290,7 @@
       "refersTo": "input-field",
       "description": "White field with cool border and clear focus ring for mobile forms.",
       "html": "<label class=\"ds-field\">Batas bulanan<input placeholder=\"100000\" inputmode=\"numeric\" /></label>",
-      "css": ".ds-field { display: grid; gap: 6px; color: #526173; font: 600 0.9rem/1.35 Inter, ui-sans-serif, system-ui, sans-serif; } .ds-field input { width: 100%; border: 1px solid #cfd9e8; border-radius: 12px; background: #ffffff; color: #172033; font: inherit; padding: 10px 12px; } .ds-field input::placeholder { color: #526173; opacity: 1; } .ds-field input:focus { outline: 3px solid rgb(35 116 225 / 28%); outline-offset: 2px; }"
+      "css": ".ds-field { display: grid; gap: 6px; color: #a8b6c7; font: 600 0.9rem/1.35 Inter, ui-sans-serif, system-ui, sans-serif; } .ds-field input { width: 100%; border: 1px solid #3a4d60; border-radius: 12px; background: #172331; color: #dbe5f1; font: inherit; padding: 10px 12px; } .ds-field input::placeholder { color: #a8b6c7; opacity: 1; } .ds-field input:focus { outline: 3px solid rgb(51 144 236 / 34%); outline-offset: 2px; }"
     },
     {
       "name": "Main Panel",
@@ -298,7 +298,7 @@
       "refersTo": "card-main",
       "description": "Premium top-level container for dashboard, pages, and CRUD panels.",
       "html": "<section class=\"ds-main-panel\"><h2>Catatan manual</h2><p>Kelola pemasukan dan pengeluaran manual.</p></section>",
-      "css": ".ds-main-panel { width: min(100%, 960px); border: 1px solid #dce5f2; border-radius: 24px; background: #ffffff; box-shadow: 0 16px 48px rgb(26 41 61 / 10%); color: #172033; padding: clamp(20px, 5vw, 32px); } .ds-main-panel h2 { margin: 0 0 12px; color: #0f172a; font: 800 clamp(1.4rem, 4vw, 2rem)/1.2 Inter, ui-sans-serif, system-ui, sans-serif; } .ds-main-panel p { max-width: 64ch; margin: 0; color: #526173; font: 400 1rem/1.6 Inter, ui-sans-serif, system-ui, sans-serif; }"
+      "css": ".ds-main-panel { width: min(100%, 960px); border: 1px solid #334457; border-radius: 24px; background: #1e2a36; box-shadow: 0 18px 56px rgb(0 0 0 / 26%); color: #dbe5f1; padding: clamp(20px, 5vw, 32px); } .ds-main-panel h2 { margin: 0 0 12px; color: #f5f8fc; font: 800 1.4rem/1.2 Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: -0.02em; } .ds-main-panel p { max-width: 64ch; margin: 0; color: #a8b6c7; font: 400 1rem/1.6 Inter, ui-sans-serif, system-ui, sans-serif; }"
     },
     {
       "name": "Menu Card",
@@ -306,7 +306,7 @@
       "refersTo": "card-inner",
       "description": "Touchable navigation tile for Mini App task areas.",
       "html": "<button class=\"ds-menu-card\" type=\"button\"><span>Budget</span><small>Atur dan pantau batas pengeluaran bulanan.</small></button>",
-      "css": ".ds-menu-card { display: grid; gap: 8px; width: 100%; border: 1px solid #e5edf7; border-radius: 20px; background: #fbfdff; color: #172033; cursor: pointer; padding: 18px; text-align: left; transition: border-color 150ms ease-out, background-color 150ms ease-out, transform 150ms ease-out; } .ds-menu-card span { color: #0f172a; font: 800 1.05rem/1.2 Inter, ui-sans-serif, system-ui, sans-serif; } .ds-menu-card small { color: #526173; font: 500 0.9rem/1.5 Inter, ui-sans-serif, system-ui, sans-serif; } .ds-menu-card:hover { border-color: #bfd5f5; background: #f6f9fd; transform: translateY(-1px); } .ds-menu-card:focus-visible { outline: 3px solid rgb(35 116 225 / 28%); outline-offset: 2px; }"
+      "css": ".ds-menu-card { display: grid; gap: 8px; width: 100%; border: 1px solid #2b3a4a; border-radius: 20px; background: linear-gradient(180deg, #263645 0%, #23313f 100%); color: #dbe5f1; cursor: pointer; padding: 18px; text-align: left; transition: border-color 150ms ease-out, background-color 150ms ease-out, transform 150ms ease-out; } .ds-menu-card span { color: #f5f8fc; font: 800 1.05rem/1.2 Inter, ui-sans-serif, system-ui, sans-serif; } .ds-menu-card small { color: #a8b6c7; font: 500 0.9rem/1.5 Inter, ui-sans-serif, system-ui, sans-serif; } .ds-menu-card:hover { border-color: #40698f; background: #182532; transform: translateY(-1px); } .ds-menu-card:focus-visible { outline: 3px solid rgb(51 144 236 / 34%); outline-offset: 2px; }"
     },
     {
       "name": "Advisor Chat Bubble",
@@ -314,7 +314,7 @@
       "refersTo": "card-inner",
       "description": "Quiet conversational surface for advisor responses and user prompts.",
       "html": "<div class=\"ds-chat-stack\"><p class=\"ds-chat-user\">Bagaimana cashflow saya bulan ini?</p><p class=\"ds-chat-assistant\">Cashflow kamu masih positif. Fokus kurangi kategori belanja dulu.</p></div>",
-      "css": ".ds-chat-stack { display: grid; gap: 10px; max-width: 420px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; } .ds-chat-user, .ds-chat-assistant { margin: 0; border-radius: 16px; padding: 12px 16px; line-height: 1.6; } .ds-chat-user { justify-self: end; background: #edf4ff; color: #172033; text-align: right; } .ds-chat-assistant { justify-self: start; background: #f6f9fd; color: #526173; }"
+      "css": ".ds-chat-stack { display: grid; gap: 10px; max-width: 680px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; } .ds-chat-user, .ds-chat-assistant { margin: 0; border-radius: 16px; padding: 12px 16px; line-height: 1.7; } .ds-chat-user { justify-self: end; max-width: min(82%, 36rem); background: #2b5278; color: #f4f8fd; } .ds-chat-assistant { justify-self: start; max-width: 68ch; border: 1px solid #2b3a4a; background: #202c38; color: #dbe5f1; }"
     },
     {
       "name": "Interactive Category Donut",
@@ -335,7 +335,7 @@
   ],
   "narrative": {
     "northStar": "The Private Ledger",
-    "overview": "The interface should feel like a private financial ledger made for a modern Telegram workflow: personal, quiet, premium enough to trust, and practical enough to use every day. It is a product UI, not a campaign page, so design serves the user's next action: check cashflow, add a transaction, adjust a budget, or ask the advisor a grounded question. The visual system is restrained and cool-toned. White panels sit on Cool Porcelain backgrounds with Telegram Blue used sparingly for primary action, focus, and progress. Rounded shapes and measured shadows create a premium panel feel without becoming flashy fintech or corporate BI.",
+    "overview": "The interface should feel like a private financial ledger made for a modern Telegram workflow: personal, quiet, premium enough to trust, and practical enough to use every day. The visual system uses a Telegram dark-mode base: deep blue-gray app chrome, quiet layered surfaces, readable light ink, and Telegram Blue used sparingly for primary actions, focus, and progress. Advisor text borrows from Claude's calm reading experience: generous line-height, prose-width assistant messages, and formatted practical notes instead of dense chat blobs.",
     "keyCharacteristics": [
       "Cool neutral surfaces with one functional accent.",
       "Soft, premium panel depth reserved for major containers.",
@@ -382,18 +382,20 @@
       "Do preserve visible focus states on every button, input, and select.",
       "Do communicate income, expense, danger, and over-budget states with both color and text.",
       "Do keep Indonesian UI copy direct, practical, and free of financial jargon.",
-      "Do keep mobile charts compact: interactive category donut for share-of-expense, horizontal bars for monthly trends."
+      "Do keep mobile charts compact: interactive category donut for share-of-expense, horizontal bars for monthly trends.",
+      "Do use a Telegram dark-mode base for Mini App surfaces.",
+      "Do keep advisor chat readable like a Claude-style practical note: prose-width assistant messages, formatted paragraphs/lists, and generous line-height."
     ],
     "donts": [
       "Don't make it flashy fintech marketing, crypto dashboards, generic corporate BI dashboards, purple AI-product slop, or colorful decorative pages.",
-      "Don't add heavy gradients, gradient text, neon accents, glassmorphism, or decorative blur panels.",
       "Don't introduce purple as an AI cue, even as a secondary accent.",
       "Don't turn dashboard metrics into overdesigned hero-stat cards.",
       "Don't use side-stripe borders as colored accents on cards, list items, callouts, or alerts.",
       "Don't place tiny uppercase tracked eyebrows above every section as decoration.",
       "Don't use color alone to explain status; pair it with readable labels, values, or helper text.",
       "Don't use line charts for the current mobile monthly trend card unless the layout is redesigned with enough horizontal space.",
-      "Don't use categorical chart colors as decorative page accents."
+      "Don't use categorical chart colors as decorative page accents.",
+      "Don't add heavy gradients, gradient text, neon accents, glassmorphism, decorative blur panels, or black terminal-style styling."
     ]
   }
 }
