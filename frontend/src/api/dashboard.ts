@@ -10,7 +10,7 @@ export interface DashboardSummary {
     income_total: number;
     expense_total: number;
     net_cashflow: number;
-    savings_rate_percent: number;
+    surplus_rate_percent: number;
 }
 
 export interface CategoryBreakdownItem {

@@ -581,8 +581,9 @@ app/bot/advisor.py                 Telegram advisor mode state machine
 app/repositories/*.py              Supabase query-builder repositories
 app/services/rule_parser.py        Deterministic Indonesian transaction parser
 app/services/gemini_parser.py      Gemini fallback transaction parser
-app/services/advisor_service.py    Advisor context aggregation + Gemini prompts
+app/services/advisor_service.py    Advisor context aggregation + Gemini calls
 app/services/advisor_chat_service.py Shared advisor chat persistence/orchestration
+app/prompts/*.md                   Markdown system prompts loaded by services
 app/services/advisor_mode_timeout_service.py Expired advisor mode notifications
 app/services/cashflow_period.py    Shared cashflow period calculation
 app/core/*.py                      Settings and Telegram initData validation
@@ -600,7 +601,7 @@ Notes:
 ```text
 src/App.tsx                        Telegram auth bootstrap, page navigation, keep-alive cache
 src/api/*.ts                       Typed Axios API helpers, including settings
-src/components/DashboardOverview.tsx Summary, interactive category donut, compact trend bars, recent transactions
+src/components/DashboardOverview.tsx Summary with surplus rate, interactive category donut, compact trend bars, recent transactions
 src/components/PageMenu.tsx        Dashboard menu for Budget, AI Advisor, Transaksi, Pengaturan pages
 src/components/PageHeader.tsx      Shared page title/back navigation
 src/components/BudgetPanel.tsx     Budget CRUD and progress display

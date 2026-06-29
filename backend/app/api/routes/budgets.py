@@ -56,7 +56,6 @@ def category_actuals(
     month_start: date,
     next_month_start: date,
 ) -> dict[str, Decimal]:
-    """Return category→actual expense totals for the current user period."""
     from app.api.routes.dashboard import list_all_transactions
 
     rows = list_all_transactions(
@@ -140,7 +139,6 @@ async def create_budget(
         else current_cashflow_period(start_day)
     )
 
-    # Check for duplicate before creating
     existing = budgets_repository.list_for_user_month(
         current_user["id"],
         month_start,

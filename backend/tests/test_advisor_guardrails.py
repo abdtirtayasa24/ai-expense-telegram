@@ -33,13 +33,29 @@ _FAKE_ENV = {
 
 _EMPTY_CONTEXT = {
     "period": "2026-06",
+    "period_start": "2026-06-01",
+    "period_end": "2026-07-01",
     "income_total": 100000.0,
     "expense_total": 5000.0,
     "net_cashflow": 95000.0,
-    "savings_rate_percent": 95.0,
+    "surplus_rate_percent": 95.0,
+    "period_elapsed_days": 29,
+    "period_total_days": 30,
+    "period_remaining_days": 1,
+    "period_progress_percent": 96.67,
+    "average_daily_expense_so_far": 172.41,
+    "average_daily_variable_expense_so_far": 172.41,
+    "projected_expense_total_at_current_pace": 5172.41,
+    "projected_net_cashflow_at_current_pace": 94827.59,
+    "projected_surplus_rate_percent": 94.83,
     "top_categories": [],
     "budget_violations": [],
     "recurring_expenses": [],
+    "expense_cadence_breakdown": {
+        "likely_monthly_or_fixed": [],
+        "likely_daily_or_variable": [],
+        "unclear_or_one_off": [],
+    },
     "last_3_months": [],
 }
 
@@ -74,11 +90,30 @@ async def test_build_advisor_context_aggregates_current_user_data() -> None:
     seed_transaction(transactions)
     budgets.create("user-1", "transportasi", Decimal("50000"), date(2026, 6, 1))
 
-    context = build_advisor_context("user-1", transactions, budgets)
+    with patch(
+        "app.services.advisor_service.current_cashflow_period",
+        return_value=(date(2026, 6, 1), date(2026, 7, 1)),
+    ), patch(
+        "app.services.advisor_service.today_jakarta",
+        return_value=date(2026, 6, 29),
+    ):
+        context = build_advisor_context("user-1", transactions, budgets)
 
     assert context["expense_total"] == 5000.0
     assert context["income_total"] == 100000.0
     assert context["net_cashflow"] == 95000.0
+    assert context["surplus_rate_percent"] == 95.0
+    assert "savings_rate_percent" not in context
+    assert context["period_total_days"] == 30
+    assert context["period_remaining_days"] == 1
+    assert context["expense_cadence_breakdown"]["likely_daily_or_variable"] == [
+        {
+            "category": "transportasi",
+            "amount": 5000.0,
+            "transaction_count": 1,
+            "reason": "kategori pengeluaran harian/variabel",
+        }
+    ]
     assert len(context["budget_violations"]) == 0
 
 
@@ -126,6 +161,9 @@ async def test_build_advisor_context_uses_custom_cashflow_period() -> None:
     with patch(
         "app.services.advisor_service.current_cashflow_period",
         return_value=(date(2026, 6, 29), date(2026, 7, 29)),
+    ), patch(
+        "app.services.advisor_service.today_jakarta",
+        return_value=date(2026, 6, 29),
     ):
         context = build_advisor_context(
             "user-1",
@@ -140,6 +178,13 @@ async def test_build_advisor_context_uses_custom_cashflow_period() -> None:
     assert context["income_total"] == 100000.0
     assert context["expense_total"] == 25000.0
     assert context["net_cashflow"] == 75000.0
+    assert context["surplus_rate_percent"] == 75.0
+    assert context["period_elapsed_days"] == 1
+    assert context["period_total_days"] == 30
+    assert context["period_remaining_days"] == 29
+    assert context["projected_expense_total_at_current_pace"] == 750000.0
+    assert context["projected_net_cashflow_at_current_pace"] == -650000.0
+    assert context["projected_surplus_rate_percent"] == -650.0
     assert context["budget_violations"] == [
         {"category": "makanan_minuman", "budget": 20000.0, "actual": 25000.0}
     ]
@@ -173,7 +218,18 @@ async def test_generate_insights_returns_structured_report(
     )
     mock_client_cls.return_value = mock_client
 
-    result = await generate_insights(_EMPTY_CONTEXT, "test-key", "test-model")
+    with patch(
+        "app.services.advisor_service.today_jakarta",
+        return_value=date(2026, 6, 29),
+    ):
+        result = await generate_insights(_EMPTY_CONTEXT, "test-key", "test-model")
+
+    call = mock_client.aio.models.generate_content.call_args
+    assert "Today date: 2026-06-29" in call.kwargs["contents"]
+    assert "Current period: 2026-06" in call.kwargs["contents"]
+    assert "surplus_rate_percent" in call.kwargs["contents"]
+    assert "savings_rate_percent" not in call.kwargs["contents"]
+    assert "not savings" in call.kwargs["config"].system_instruction.lower()
     assert result["summary"] == "Keuangan kamu sehat."
     assert "Terus catat pengeluaran." in result["recommendations"]
 
@@ -193,10 +249,18 @@ async def test_generate_chat_answer_uses_context(
     )
     mock_client_cls.return_value = mock_client
 
-    answer = await generate_chat_answer(
-        _EMPTY_CONTEXT,
-        "Bagaimana cashflow saya?",
-        "test-key",
-        "test-model",
-    )
+    with patch(
+        "app.services.advisor_service.today_jakarta",
+        return_value=date(2026, 6, 29),
+    ):
+        answer = await generate_chat_answer(
+            _EMPTY_CONTEXT,
+            "Bagaimana cashflow saya?",
+            "test-key",
+            "test-model",
+        )
+
+    call = mock_client.aio.models.generate_content.call_args
+    assert "Today date: 2026-06-29" in call.kwargs["contents"]
+    assert "Current period: 2026-06" in call.kwargs["contents"]
     assert "Rp95.000" in answer

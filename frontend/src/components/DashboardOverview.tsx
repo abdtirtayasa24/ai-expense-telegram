@@ -202,8 +202,8 @@ export function DashboardOverview({
                     </dd>
                 </div>
                 <div>
-                    <dt>Savings rate</dt>
-                    <dd>{data.summary.savings_rate_percent}%</dd>
+                    <dt>Rasio surplus</dt>
+                    <dd>{data.summary.surplus_rate_percent}%</dd>
                 </div>
             </dl>
 

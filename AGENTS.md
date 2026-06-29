@@ -54,6 +54,7 @@ app/
   integrations/              ← external clients (Supabase, Telegram)
   repositories/              ← database access layer
   schemas/                   ← Pydantic models (v2)
+  prompts/                   ← Markdown system prompts loaded by services
   services/                  ← business logic
   main.py                    ← FastAPI app entry
 ```
@@ -62,6 +63,7 @@ app/
 - Routes call services and repositories, never the database client directly.
 - Repositories extend `BaseRepository` and receive a `SupabaseClient` (real or fake).
 - Advisor chat history is stored through `advisor_chat_repository.py`; see the architecture data model for details.
+- Gemini/advisor system prompts live in `app/prompts/*.md`; do not reintroduce long inline prompt strings in services.
 - All protected API endpoints use `get_current_user` dependency.
 - All data queries must scope by `user_id`.
 - Use `Annotated[Type, Depends(factory)]` for FastAPI dependencies.
@@ -111,6 +113,14 @@ class SomeRepository(BaseRepository):
 - `FakeSupabaseClient` does NOT enforce unique constraints — check duplicates in route or test explicitly.
 
 ## Coding Conventions
+
+### Comments and Docstrings
+
+- Prefer self-explanatory code over comments.
+- Do not add comments or docstrings for obvious behavior, simple functions, or restating what the code already says.
+- Add comments only when they explain non-obvious business rules, security constraints, data-risk tradeoffs, external API quirks, or why a surprising implementation is necessary.
+- Keep required tooling comments such as `# type: ignore[...]` only when needed, and make them as narrow as possible.
+- Markdown prompt files may use headings and structure freely; those are prompt content, not code comments.
 
 ### Python
 

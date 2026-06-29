@@ -328,7 +328,7 @@ Goal: Provide budgeting and cashflow advice.
 
 - Advisor identifies overspending categories.
 - Advisor explains monthly cashflow.
-- Advisor gives savings suggestions based on surplus.
+- Advisor gives surplus-based cashflow suggestions.
 - Advisor can estimate debt payoff from surplus.
 - Advisor refuses or redirects investment/product advice.
 

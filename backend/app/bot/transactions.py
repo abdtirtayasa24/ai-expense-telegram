@@ -56,7 +56,6 @@ async def handle_transaction_message(
             )
             return True
 
-    # Rule parser low-confidence → try Gemini fallback
     try:
         from app.services.gemini_parser import parse_gemini_transaction
 

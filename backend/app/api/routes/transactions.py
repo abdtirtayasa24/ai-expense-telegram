@@ -1,4 +1,3 @@
-from calendar import monthrange
 from datetime import date
 from decimal import Decimal
 from typing import Annotated
@@ -53,13 +52,10 @@ def parse_month(month: str | None) -> tuple[date | None, date | None]:
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Format bulan harus YYYY-MM.",
         ) from exc
-    _, days_in_month = monthrange(month_start.year, month_start.month)
     if month_start.month == 12:
         next_month_start = date(month_start.year + 1, 1, 1)
     else:
         next_month_start = date(month_start.year, month_start.month + 1, 1)
-    # monthrange validates date; keep days_in_month read to document range validation.
-    _ = days_in_month
     return month_start, next_month_start
 
 

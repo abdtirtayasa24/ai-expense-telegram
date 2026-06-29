@@ -95,7 +95,7 @@ def list_all_transactions(
         offset += page_size
 
 
-def savings_rate(income_total: Decimal, net_cashflow: Decimal) -> float:
+def surplus_rate(income_total: Decimal, net_cashflow: Decimal) -> float:
     if income_total <= 0:
         return 0.0
     rate = net_cashflow / income_total * Decimal("100")
@@ -126,7 +126,7 @@ async def dashboard_summary(
         income_total=float(income_total),
         expense_total=float(expense_total),
         net_cashflow=float(net_cashflow),
-        savings_rate_percent=savings_rate(income_total, net_cashflow),
+        surplus_rate_percent=surplus_rate(income_total, net_cashflow),
     )
 
 

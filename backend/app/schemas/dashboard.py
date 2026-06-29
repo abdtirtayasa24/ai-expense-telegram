@@ -8,7 +8,7 @@ class DashboardSummary(BaseModel):
     income_total: float
     expense_total: float
     net_cashflow: float
-    savings_rate_percent: float
+    surplus_rate_percent: float
 
 
 class CategoryBreakdownItem(BaseModel):

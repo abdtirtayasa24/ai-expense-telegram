@@ -38,6 +38,7 @@ ai-expense-telegram/
       integrations/     # supabase_client, telegram_client
       repositories/     # users, transactions, budgets, insights, conversation_states, advisor_chat
       schemas/          # auth, transaction, budget, dashboard, advisor, parser
+      prompts/          # Markdown system prompts for Gemini/advisor services
       services/         # parser, advisor, cashflow period, timeout, categories, jwt services
       main.py
     tests/              # backend tests

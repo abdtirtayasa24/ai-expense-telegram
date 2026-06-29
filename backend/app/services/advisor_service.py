@@ -1,7 +1,5 @@
-"""Advisor service for budgeting/cashflow insights using Gemini."""
-
 import json
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -9,6 +7,7 @@ from zoneinfo import ZoneInfo
 from google import genai
 from google.genai import types
 
+from app.prompts.loader import load_prompt
 from app.repositories.base import Row
 from app.repositories.budgets_repository import BudgetsRepository
 from app.repositories.transactions_repository import TransactionsRepository
@@ -16,83 +15,28 @@ from app.services.cashflow_period import (
     add_months,
     current_cashflow_period,
     period_start_for_month,
+    today_jakarta,
 )
 
 JAKARTA_TZ = ZoneInfo("Asia/Jakarta")
 
-_SYSTEM_INSTRUCTION = (
-    "You are an Indonesian-language personal budgeting and cashflow assistant. "
-    "Your role is to help the user understand and improve their personal "
-    "finances using only the historical transaction data provided by the "
-    "system. "
-    "You must answer in Indonesian. "
-    "Core responsibilities: "
-    "Analyze cashflow based on historical income and expense data. "
-    "Identify budgeting patterns and spending habits. "
-    "Summarize spending by category. "
-    "Highlight unusually high or recurring expenses. "
-    "Suggest practical ways to reduce expenses based on the user's own "
-    "transaction history. "
-    "Help the user set realistic savings targets based on observed income, "
-    "expenses, and surplus cashflow. "
-    "Provide simple debt payoff estimates based only on available surplus "
-    "cashflow. "
-    "Data-grounding rules: "
-    "Only use transaction data, balances, budgets, debts, goals, or user "
-    "profile information explicitly provided by the system or user. "
-    "Do not invent income, expenses, debts, balances, interest rates, "
-    "savings goals, or financial behavior. "
-    "Do not make recommendations that are not supported by the user's "
-    "available data. "
-    "If the data is incomplete, unclear, inconsistent, or too limited, say "
-    "so clearly. "
-    "If there is not enough data to provide a reliable analysis, tell the "
-    "user that the data is not sufficient yet and suggest that they record "
-    "transactions more regularly. "
-    "When making estimates, clearly state that they are simple projections "
-    "based on the available historical data, not guarantees. "
-    "Allowed topics: "
-    "Cashflow analysis. Budgeting. Spending categories. Spending habits. "
-    "Expense reduction based on user data. Savings targets. Simple debt "
-    "payoff projections based on surplus cashflow. "
-    "Prohibited topics: "
-    "Do not recommend specific stocks, crypto assets, mutual funds, bonds, "
-    "insurance products, loans, credit cards, financial apps, banks, "
-    "brokers, or any other financial products. "
-    "Do not provide tax advice. Do not provide legal advice. "
-    "Do not guarantee financial outcomes. "
-    "Do not promise that the user will reach a goal by a certain date "
-    "unless it is clearly presented as a non-guaranteed projection based on "
-    "current data. "
-    "Do not give investment allocation advice or portfolio recommendations. "
-    "Do not suggest taking new debt, refinancing, or applying for loans. "
-    "Do not provide advice that depends on information not available in the "
-    "user's transaction data. "
-    "Response style: "
-    "Use concise, practical, and easy-to-understand Indonesian. "
-    "Be supportive, realistic, and non-judgmental. "
-    "Avoid technical finance jargon unless necessary. "
-    "Do not over-explain. Prefer clear action steps based on the user's data. "
-    "If numbers are available, include simple calculations. "
-    "Use IDR for all monetary values. "
-    "Use the Asia/Jakarta timezone when discussing dates or periods. "
-    "When relevant, include this disclaimer: "
-    "\"Ini hanya estimasi berdasarkan data transaksi yang kamu catat, "
-    "bukan nasihat keuangan profesional.\""
-)
+FIXED_OR_MONTHLY_EXPENSE_CATEGORIES = {
+    "tagihan",
+    "tempat_tinggal",
+    "utang_cicilan",
+}
+DAILY_OR_VARIABLE_EXPENSE_CATEGORIES = {
+    "transportasi",
+    "makanan_minuman",
+    "belanja",
+    "hiburan",
+    "kesehatan",
+    "pendidikan",
+    "keluarga",
+}
 
-_INSIGHTS_INSTRUCTION = (
-    "You are generating a monthly financial insight report. "
-    "You will receive a JSON object containing the user's financial summary "
-    "for the current month. "
-    "Respond with a JSON object containing exactly three fields: "
-    "\"summary\" (a concise paragraph in Indonesian analyzing the month), "
-    "\"recommendations\" (a list of practical action items in Indonesian), "
-    "and \"warnings\" (a list of issues or overspending alerts in "
-    "Indonesian — return an empty list if there are none). "
-    "If the data shows zero income and zero expenses, the summary should "
-    "note that there is not enough data yet."
-)
+_SYSTEM_INSTRUCTION = load_prompt("advisor_chat.md")
+_INSIGHTS_INSTRUCTION = load_prompt("advisor_insights.md")
 
 
 def _period_key(period_start: datetime, start_day: int) -> str:
@@ -111,7 +55,6 @@ def build_advisor_context(
     budgets_repository: BudgetsRepository,
     cashflow_period_start_day: int = 1,
 ) -> dict[str, Any]:
-    """Aggregate the current user's financial context for the current period."""
     period_start_date, next_start_date = current_cashflow_period(
         cashflow_period_start_day,
     )
@@ -143,7 +86,6 @@ def build_advisor_context(
                 category_expenses.get(category, Decimal("0")) + amount
             )
 
-    # Recurring detection: same name in previous months
     for delta in (1, 2):
         prev_start_date = period_start_for_month(
             add_months(period_start_date.replace(day=1), -delta),
@@ -177,15 +119,13 @@ def build_advisor_context(
             )
 
     net_cashflow = income_total - expense_total
-    savings_rate = float(
-        (net_cashflow / income_total * Decimal("100")).quantize(Decimal("0.01"))
-    ) if income_total > 0 else 0.0
+    surplus_rate = _percentage(net_cashflow, income_total)
+    period_progress = _period_progress(period_start_date, next_start_date)
 
     top_categories = sorted(
         category_expenses.items(), key=lambda x: x[1], reverse=True
     )
 
-    # Budget violations
     budgets = budgets_repository.list_for_user_month(user_id, month_start.date())
     violations = []
     for budget in budgets:
@@ -197,7 +137,6 @@ def build_advisor_context(
                 {"category": cat, "budget": float(limit), "actual": float(actual)}
             )
 
-    # Last 3 months trend
     trend = []
     for delta in range(2, -1, -1):
         m_start_date = period_start_for_month(
@@ -230,6 +169,25 @@ def build_advisor_context(
             }
         )
 
+    cadence_breakdown = _expense_cadence_breakdown(rows)
+    variable_expense_total = _cadence_total(
+        cadence_breakdown["likely_daily_or_variable"]
+    )
+    fixed_expense_total = _cadence_total(
+        cadence_breakdown["likely_monthly_or_fixed"]
+    )
+    unclear_expense_total = _cadence_total(cadence_breakdown["unclear_or_one_off"])
+    elapsed_days = period_progress["period_elapsed_days"]
+    total_days = period_progress["period_total_days"]
+    average_daily_expense = _safe_divide(expense_total, elapsed_days)
+    average_daily_variable_expense = _safe_divide(variable_expense_total, elapsed_days)
+    projected_expense_total = (
+        fixed_expense_total
+        + unclear_expense_total
+        + average_daily_variable_expense * Decimal(total_days)
+    )
+    projected_net_cashflow = income_total - projected_expense_total
+
     return {
         "period": period_key,
         "period_start": period_start_date.isoformat(),
@@ -237,15 +195,114 @@ def build_advisor_context(
         "income_total": float(income_total),
         "expense_total": float(expense_total),
         "net_cashflow": float(net_cashflow),
-        "savings_rate_percent": savings_rate,
+        "surplus_rate_percent": surplus_rate,
+        **period_progress,
+        "average_daily_expense_so_far": _money_float(average_daily_expense),
+        "average_daily_variable_expense_so_far": _money_float(
+            average_daily_variable_expense
+        ),
+        "projected_expense_total_at_current_pace": _money_float(
+            projected_expense_total
+        ),
+        "projected_net_cashflow_at_current_pace": _money_float(
+            projected_net_cashflow
+        ),
+        "projected_surplus_rate_percent": _percentage(
+            projected_net_cashflow, income_total
+        ),
         "top_categories": [
             {"category": cat, "amount": float(amt)}
             for cat, amt in top_categories[:5]
         ],
         "budget_violations": violations,
         "recurring_expenses": recurring[:5],
+        "expense_cadence_breakdown": cadence_breakdown,
         "last_3_months": trend,
     }
+
+
+def _money_float(value: Decimal) -> float:
+    return float(value.quantize(Decimal("0.01")))
+
+
+def _percentage(numerator: Decimal, denominator: Decimal) -> float:
+    if denominator <= 0:
+        return 0.0
+    value = numerator / denominator * Decimal("100")
+    return float(value.quantize(Decimal("0.01")))
+
+
+def _safe_divide(value: Decimal, divisor: int) -> Decimal:
+    if divisor <= 0:
+        return Decimal("0")
+    return value / Decimal(divisor)
+
+
+def _period_progress(period_start: date, period_end: date) -> dict[str, int | float]:
+    today = today_jakarta()
+    total_days = max((period_end - period_start).days, 1)
+    if today < period_start:
+        elapsed_days = 0
+    elif today >= period_end:
+        elapsed_days = total_days
+    else:
+        elapsed_days = (today - period_start).days + 1
+    remaining_days = max(total_days - elapsed_days, 0)
+    progress = Decimal(elapsed_days) / Decimal(total_days) * Decimal("100")
+    return {
+        "period_elapsed_days": elapsed_days,
+        "period_total_days": total_days,
+        "period_remaining_days": remaining_days,
+        "period_progress_percent": float(progress.quantize(Decimal("0.01"))),
+    }
+
+
+def _expense_cadence_breakdown(rows: list[Row]) -> dict[str, list[dict[str, Any]]]:
+    grouped: dict[str, dict[str, Decimal | int]] = {}
+    for row in rows:
+        if row.get("type") != "expense":
+            continue
+        category = str(row["category"])
+        current = grouped.setdefault(
+            category,
+            {"amount": Decimal("0"), "transaction_count": 0},
+        )
+        current["amount"] = Decimal(str(current["amount"])) + _row_amount(row)
+        current["transaction_count"] = int(current["transaction_count"]) + 1
+
+    breakdown = {
+        "likely_monthly_or_fixed": [],
+        "likely_daily_or_variable": [],
+        "unclear_or_one_off": [],
+    }
+    for category, values in sorted(grouped.items()):
+        amount = Decimal(str(values["amount"]))
+        transaction_count = int(values["transaction_count"])
+        item = {
+            "category": category,
+            "amount": float(amount),
+            "transaction_count": transaction_count,
+        }
+        if category in FIXED_OR_MONTHLY_EXPENSE_CATEGORIES:
+            breakdown["likely_monthly_or_fixed"].append(
+                {**item, "reason": "kategori pengeluaran tetap/bulanan"}
+            )
+        elif category in DAILY_OR_VARIABLE_EXPENSE_CATEGORIES:
+            breakdown["likely_daily_or_variable"].append(
+                {**item, "reason": "kategori pengeluaran harian/variabel"}
+            )
+        else:
+            breakdown["unclear_or_one_off"].append(
+                {**item, "reason": "kategori belum cukup jelas untuk diproyeksikan"}
+            )
+    return breakdown
+
+
+def _cadence_total(items: list[dict[str, Any]]) -> Decimal:
+    total = Decimal("0")
+    for item in items:
+        total += Decimal(str(item["amount"]))
+    return total
 
 
 def _list_all(
@@ -254,7 +311,6 @@ def _list_all(
     month_start: Any,
     next_month_start: Any,
 ) -> list[Row]:
-    """Fetch all expense+income transactions for a month range."""
     rows: list[Row] = []
     offset = 0
     page_size = 1000
@@ -277,7 +333,6 @@ async def generate_insights(
     api_key: str,
     model: str,
 ) -> dict[str, Any]:
-    """Call Gemini to generate a monthly insights report."""
     client = genai.Client(api_key=api_key)
     config = types.GenerateContentConfig(
         response_mime_type="application/json",
@@ -293,7 +348,8 @@ async def generate_insights(
         system_instruction=_INSIGHTS_INSTRUCTION,
     )
     prompt = (
-        f"Today date: {context['period']}\n"
+        f"Today date: {today_jakarta().isoformat()}\n"
+        f"Current period: {context['period']}\n"
         f"Timezone: Asia/Jakarta\n\n"
         f"User financial context:\n{json.dumps(context, ensure_ascii=False)}\n\n"
         f"Generate a monthly financial insight report in Indonesian."
@@ -315,14 +371,14 @@ async def generate_chat_answer(
     model: str,
     chat_history: list[Row] | None = None,
 ) -> str:
-    """Call Gemini to answer an advisor chat question."""
     client = genai.Client(api_key=api_key)
     config = types.GenerateContentConfig(
         system_instruction=_SYSTEM_INSTRUCTION,
     )
     history = chat_history or []
     prompt = (
-        f"Today date: {context['period']}\n"
+        f"Today date: {today_jakarta().isoformat()}\n"
+        f"Current period: {context['period']}\n"
         f"Timezone: Asia/Jakarta\n\n"
         f"User financial context:\n{json.dumps(context, ensure_ascii=False)}\n\n"
         f"Recent advisor conversation:\n"

@@ -88,7 +88,7 @@ def test_dashboard_summary_calculates_current_user_month_totals() -> None:
         "income_total": 100000.0,
         "expense_total": 25000.0,
         "net_cashflow": 75000.0,
-        "savings_rate_percent": 75.0,
+        "surplus_rate_percent": 75.0,
     }
 
 
@@ -126,7 +126,7 @@ def test_dashboard_summary_uses_custom_cashflow_period() -> None:
         "income_total": 100000.0,
         "expense_total": 25000.0,
         "net_cashflow": 75000.0,
-        "savings_rate_percent": 75.0,
+        "surplus_rate_percent": 75.0,
     }
 
 
