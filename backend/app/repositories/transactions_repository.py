@@ -64,7 +64,12 @@ class TransactionsRepository(BaseRepository):
             category=category,
         )
         end = offset + limit - 1
-        result = query.order("transaction_date", desc=True).range(offset, end).execute()
+        result = (
+            query.order("transaction_date", desc=True)
+            .order("created_at", desc=True)
+            .range(offset, end)
+            .execute()
+        )
         return self.rows(result)
 
     def get_for_user(self, transaction_id: str, user_id: str) -> Row | None:

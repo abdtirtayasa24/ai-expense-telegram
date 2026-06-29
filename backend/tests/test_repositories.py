@@ -76,7 +76,7 @@ class FakeQueryBuilder:
         self.operation = "select"
         self.payload: dict[str, Any] = {}
         self.filters: list[tuple[str, str, Any]] = []
-        self.order_by: tuple[str, bool] | None = None
+        self.order_by: list[tuple[str, bool]] = []
         self.limit_count: int | None = None
         self.range_bounds: tuple[int, int] | None = None
 
@@ -111,7 +111,7 @@ class FakeQueryBuilder:
         return self
 
     def order(self, column: str, desc: bool = False) -> FakeQueryBuilder:
-        self.order_by = (column, desc)
+        self.order_by.append((column, desc))
         return self
 
     def limit(self, count: int) -> FakeQueryBuilder:
@@ -134,8 +134,7 @@ class FakeQueryBuilder:
 
         if self.operation == "select":
             rows = [deepcopy(row) for row in matched]
-            if self.order_by is not None:
-                column, desc = self.order_by
+            for column, desc in reversed(self.order_by):
                 rows.sort(key=lambda row: row.get(column), reverse=desc)
             if self.range_bounds is not None:
                 start, end = self.range_bounds

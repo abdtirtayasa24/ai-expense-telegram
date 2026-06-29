@@ -119,6 +119,48 @@ def test_list_transactions_returns_current_user_data_with_filters() -> None:
     }
 
 
+def test_list_transactions_returns_descending_by_date_then_created_at() -> None:
+    client_store = FakeSupabaseClient()
+    repository = TransactionsRepository(client_store)
+    older_same_day = seed_transaction(
+        repository,
+        name="Makan siang",
+        transaction_date=date(2026, 6, 26),
+    )
+    newer_day = seed_transaction(
+        repository,
+        name="Gaji",
+        transaction_type="income",
+        category="pendapatan",
+        amount=Decimal("8000000"),
+        transaction_date=date(2026, 6, 27),
+    )
+    newer_same_day = seed_transaction(
+        repository,
+        name="Parkir malam",
+        transaction_date=date(2026, 6, 26),
+    )
+    for row in client_store.tables["transactions"]:
+        if row["id"] == older_same_day["id"]:
+            row["created_at"] = "2026-06-26T08:00:00+00:00"
+        if row["id"] == newer_same_day["id"]:
+            row["created_at"] = "2026-06-26T20:00:00+00:00"
+
+    client = transaction_client(repository)
+
+    try:
+        response = client.get("/transactions?limit=10&offset=0")
+    finally:
+        clear_overrides()
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()["items"]] == [
+        newer_day["id"],
+        newer_same_day["id"],
+        older_same_day["id"],
+    ]
+
+
 def test_list_transactions_returns_has_next_when_more_rows_exist() -> None:
     repository = TransactionsRepository(FakeSupabaseClient())
     for index in range(11):
