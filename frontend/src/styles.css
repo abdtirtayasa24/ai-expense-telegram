@@ -731,6 +731,12 @@ dd {
     font-size: 1.1rem;
 }
 
+.manual-entry-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: var(--space-lg);
+}
+
 .transaction-form {
     border: 1px solid var(--color-border-soft);
     border-radius: var(--radius-card);

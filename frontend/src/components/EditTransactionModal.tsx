@@ -13,14 +13,30 @@ interface CategoryOption {
 }
 
 interface EditTransactionModalProps {
-    transaction: Transaction;
+    transaction: Transaction | null;
     categories: CategoryOption[];
     isSaving: boolean;
     onClose: () => void;
     onSave: (payload: TransactionPayload) => void;
 }
 
-function toForm(transaction: Transaction): TransactionPayload {
+const DEFAULT_FORM: TransactionPayload = {
+    type: "expense",
+    name: "",
+    category: "transportasi",
+    amount: 0,
+    transaction_date: new Date().toISOString().slice(0, 10),
+    note: "",
+};
+
+function toForm(transaction: Transaction | null): TransactionPayload {
+    if (transaction === null) {
+        return {
+            ...DEFAULT_FORM,
+            transaction_date: new Date().toISOString().slice(0, 10),
+        };
+    }
+
     return {
         type: transaction.type,
         name: transaction.name,
@@ -99,6 +115,11 @@ export function EditTransactionModal({
         onSave(form);
     }
 
+    const title = transaction === null ? "Tambah transaksi" : "Edit transaksi";
+    const description = transaction === null
+        ? "Catat pemasukan atau pengeluaran manual tanpa meninggalkan halaman."
+        : "Perbarui detail transaksi tanpa meninggalkan halaman.";
+
     return (
         <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
             <section
@@ -106,15 +127,13 @@ export function EditTransactionModal({
                 className="modal-dialog"
                 role="dialog"
                 aria-modal="true"
-                aria-labelledby="edit-transaction-title"
+                aria-labelledby="transaction-modal-title"
                 onMouseDown={(event) => event.stopPropagation()}
             >
                 <div className="modal-header">
                     <div>
-                        <h2 id="edit-transaction-title">Edit transaksi</h2>
-                        <p className="section-description">
-                            Perbarui detail transaksi tanpa meninggalkan halaman.
-                        </p>
+                        <h2 id="transaction-modal-title">{title}</h2>
+                        <p className="section-description">{description}</p>
                     </div>
                     <button
                         ref={closeButtonRef}
@@ -229,7 +248,7 @@ export function EditTransactionModal({
                             Batal
                         </button>
                         <button className="primary-button" disabled={isSaving} type="submit">
-                            {isSaving ? "Menyimpan..." : "Simpan perubahan"}
+                            {isSaving ? "Menyimpan..." : "Simpan"}
                         </button>
                     </div>
                 </form>

@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
 import {
@@ -30,15 +30,6 @@ const CATEGORIES: { value: TransactionCategory; label: string }[] = [
     { value: "keluarga", label: "Keluarga" },
     { value: "lainnya", label: "Lainnya" },
 ];
-
-const DEFAULT_FORM: TransactionPayload = {
-    type: "expense",
-    name: "",
-    category: "transportasi",
-    amount: 0,
-    transaction_date: new Date().toISOString().slice(0, 10),
-    note: "",
-};
 
 interface TransactionsPanelProps {
     token: string;
@@ -86,7 +77,7 @@ export function TransactionsPanel({
     onUnauthorized,
 }: TransactionsPanelProps) {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [form, setForm] = useState<TransactionPayload>(DEFAULT_FORM);
+    const [isAddingTransaction, setIsAddingTransaction] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [offset, setOffset] = useState(0);
     const [hasNext, setHasNext] = useState(false);
@@ -144,13 +135,6 @@ export function TransactionsPanel({
         void loadTransactions(0, refreshKey);
     }, [isActive, lastLoadedRefreshKey, loadTransactions, refreshKey]);
 
-    function resetForm() {
-        setForm({
-            ...DEFAULT_FORM,
-            transaction_date: new Date().toISOString().slice(0, 10),
-        });
-    }
-
     function handleRequestError(requestError: unknown) {
         if (axios.isAxiosError(requestError) && requestError.response?.status === 401) {
             onUnauthorized("Sesi kamu sudah berakhir. Silakan buka ulang Mini App.");
@@ -159,13 +143,12 @@ export function TransactionsPanel({
         setError(errorMessage(requestError));
     }
 
-    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
+    async function handleCreate(payload: TransactionPayload) {
         setIsSaving(true);
         setError(null);
         try {
-            await createTransaction(token, form);
-            resetForm();
+            await createTransaction(token, payload);
+            setIsAddingTransaction(false);
             onDataChanged();
             await loadTransactions(0, refreshKey);
         } catch (requestError) {
@@ -234,100 +217,15 @@ export function TransactionsPanel({
                 </div>
             </div>
 
-            <form className="transaction-form" onSubmit={handleSubmit}>
-                <div className="form-grid">
-                    <label>
-                        Tipe
-                        <select
-                            value={form.type}
-                            onChange={(event) =>
-                                setForm((current) => ({
-                                    ...current,
-                                    type: event.target.value as TransactionType,
-                                }))
-                            }
-                        >
-                            <option value="expense">Pengeluaran</option>
-                            <option value="income">Pemasukan</option>
-                        </select>
-                    </label>
-                    <label>
-                        Nama
-                        <input
-                            required
-                            value={form.name}
-                            onChange={(event) =>
-                                setForm((current) => ({ ...current, name: event.target.value }))
-                            }
-                            placeholder="Contoh: Parkir kantor"
-                        />
-                    </label>
-                    <label>
-                        Kategori
-                        <select
-                            value={form.category}
-                            onChange={(event) =>
-                                setForm((current) => ({
-                                    ...current,
-                                    category: event.target.value as TransactionCategory,
-                                }))
-                            }
-                        >
-                            {CATEGORIES.map((category) => (
-                                <option key={category.value} value={category.value}>
-                                    {category.label}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                    <label>
-                        Nominal
-                        <input
-                            required
-                            min="1"
-                            type="number"
-                            inputMode="numeric"
-                            value={form.amount || ""}
-                            onChange={(event) =>
-                                setForm((current) => ({
-                                    ...current,
-                                    amount: Number(event.target.value),
-                                }))
-                            }
-                            placeholder="Contoh: 5000"
-                        />
-                    </label>
-                    <label>
-                        Tanggal
-                        <input
-                            required
-                            type="date"
-                            value={form.transaction_date}
-                            onChange={(event) =>
-                                setForm((current) => ({
-                                    ...current,
-                                    transaction_date: event.target.value,
-                                }))
-                            }
-                        />
-                    </label>
-                    <label>
-                        Catatan
-                        <input
-                            value={form.note ?? ""}
-                            onChange={(event) =>
-                                setForm((current) => ({ ...current, note: event.target.value }))
-                            }
-                            placeholder="Opsional"
-                        />
-                    </label>
-                </div>
-                <div className="form-actions">
-                    <button className="primary-button" disabled={isSaving} type="submit">
-                        {isSaving ? "Menyimpan..." : "Tambah transaksi"}
-                    </button>
-                </div>
-            </form>
+            <div className="manual-entry-actions">
+                <button
+                    className="primary-button"
+                    type="button"
+                    onClick={() => setIsAddingTransaction(true)}
+                >
+                    Tambah transaksi
+                </button>
+            </div>
 
             {error ? <p className="inline-error" role="alert">{error}</p> : null}
 
@@ -337,7 +235,7 @@ export function TransactionsPanel({
                 </div>
             ) : transactions.length === 0 ? (
                 <div className="list-state" role="status">
-                    Belum ada transaksi. Tambahkan transaksi pertama kamu dari formulir di atas.
+                    Belum ada transaksi. Tambahkan transaksi pertama kamu dari tombol di atas.
                 </div>
             ) : (
                 <>
@@ -408,6 +306,16 @@ export function TransactionsPanel({
                     </nav>
                 </>
             )}
+
+            {isAddingTransaction ? (
+                <EditTransactionModal
+                    transaction={null}
+                    categories={CATEGORIES}
+                    isSaving={isSaving}
+                    onClose={() => setIsAddingTransaction(false)}
+                    onSave={(payload) => void handleCreate(payload)}
+                />
+            ) : null}
 
             {editingTransaction ? (
                 <EditTransactionModal
