@@ -102,6 +102,10 @@ class FakeQueryBuilder:
         self.filters.append(("eq", column, value))
         return self
 
+    def gt(self, column: str, value: Any) -> FakeQueryBuilder:
+        self.filters.append(("gt", column, value))
+        return self
+
     def gte(self, column: str, value: Any) -> FakeQueryBuilder:
         self.filters.append(("gte", column, value))
         return self
@@ -177,6 +181,8 @@ class FakeQueryBuilder:
         row_value = row.get(column)
         if operator == "eq":
             return row_value == value
+        if operator == "gt":
+            return row_value > value
         if operator == "gte":
             return row_value >= value
         if operator == "lt":
@@ -277,6 +283,31 @@ def test_transactions_repository_scopes_reads_updates_and_deletes_by_user() -> N
     assert repository.delete_for_user(other["id"], "user-1") is False
     assert repository.delete_for_user(own["id"], "user-1") is True
     assert repository.get_for_user(own["id"], "user-1") is None
+
+
+def test_transactions_repository_lists_by_id_cursor() -> None:
+    client = FakeSupabaseClient()
+    repository = TransactionsRepository(client)
+    for user_id in ("user-1", "user-2", "user-1"):
+        repository.create(
+            user_id=user_id,
+            transaction_type="expense",
+            name="Parkir",
+            category="transportasi",
+            amount=Decimal("5000"),
+            transaction_date=date(2026, 6, 26),
+            source="telegram_chat",
+            parser="rule_based",
+        )
+
+    first_page = repository.list_for_user_after_id("user-1", limit=1)
+    second_page = repository.list_for_user_after_id(
+        "user-1",
+        cursor_id=first_page[-1]["id"],
+        limit=1,
+    )
+
+    assert [row["id"] for row in first_page + second_page] == ["id-1", "id-3"]
 
 
 def test_budget_insight_and_conversation_state_repositories_scope_by_user() -> None:

@@ -79,20 +79,21 @@ def list_all_transactions(
     page_size: int = 1000,
 ) -> list[Row]:
     rows: list[Row] = []
-    offset = 0
+    cursor_id: str | None = None
     while True:
-        page = transactions_repository.list_for_user(
+        page = transactions_repository.list_for_user_after_id(
             user_id,
+            cursor_id=cursor_id,
             month_start=month_start,
             next_month_start=next_month_start,
             transaction_type=transaction_type,  # type: ignore[arg-type]
             limit=page_size,
-            offset=offset,
+            columns="id,type,category,amount,transaction_date",
         )
         rows.extend(page)
         if len(page) < page_size:
             return rows
-        offset += page_size
+        cursor_id = str(page[-1]["id"])
 
 
 def surplus_rate(income_total: Decimal, net_cashflow: Decimal) -> float:

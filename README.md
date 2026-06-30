@@ -138,7 +138,7 @@ Use `.env.example` files as templates. Keep real secrets out of git.
 
 ## Supabase Migrations
 
-Migrations are in `supabase/migrations/`. For MVP, the maintainer applies these manually via Supabase SQL editor. Run all migrations in numeric order, currently 001 through 010.
+Migrations are in `supabase/migrations/`. For MVP, the maintainer applies these manually via Supabase SQL editor. Run all migrations in numeric order, currently 001 through 012.
 
 ## Deployment
 

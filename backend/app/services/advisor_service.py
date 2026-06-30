@@ -323,20 +323,21 @@ def _list_all(
     next_month_start: Any,
 ) -> list[Row]:
     rows: list[Row] = []
-    offset = 0
+    cursor_id: str | None = None
     page_size = 1000
     while True:
-        page = repository.list_for_user(  # type: ignore[call-arg]
+        page = repository.list_for_user_after_id(
             user_id,
+            cursor_id=cursor_id,
             month_start=month_start,
             next_month_start=next_month_start,
             limit=page_size,
-            offset=offset,
+            columns="id,type,name,category,amount,transaction_date",
         )
         rows.extend(page)
         if len(page) < page_size:
             return rows
-        offset += page_size
+        cursor_id = str(page[-1]["id"])
 
 
 async def generate_insights(

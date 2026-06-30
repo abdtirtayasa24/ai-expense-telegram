@@ -754,10 +754,17 @@ idx_users_status                                users(status)
 idx_users_onboarding_status                     users(onboarding_status)
 idx_transactions_user_date                      transactions(user_id, transaction_date desc)
 idx_transactions_user_category                  transactions(user_id, category)
+idx_transactions_user_date_created              transactions(user_id, transaction_date desc, created_at desc)
+idx_transactions_user_id                        transactions(user_id, id)
 idx_budgets_user_month                          budgets(user_id, month)
 idx_conversation_states_user_expires            conversation_states(user_id, expires_at)
+idx_conversation_states_state_expires           conversation_states(state, expires_at)
+idx_advisor_insights_context_cache              advisor_insights(user_id, period_start, period_end, insight_type, context_hash, created_at desc) where context_hash is not null
+idx_advisor_insights_user_period_created        advisor_insights(user_id, period_start, period_end, created_at desc)
 idx_advisor_chat_messages_user_created_at       advisor_chat_messages(user_id, created_at desc)
 ```
+
+RLS is enabled on all application tables. The backend uses the server-side Supabase service role key; direct `anon` and `authenticated` table access is revoked.
 
 `set_updated_at()` trigger maintains `updated_at` for:
 

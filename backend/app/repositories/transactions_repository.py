@@ -72,6 +72,30 @@ class TransactionsRepository(BaseRepository):
         )
         return self.rows(result)
 
+    def list_for_user_after_id(
+        self,
+        user_id: str,
+        cursor_id: str | None = None,
+        month_start: date | None = None,
+        next_month_start: date | None = None,
+        transaction_type: TransactionType | None = None,
+        category: str | None = None,
+        limit: int = 1000,
+        columns: str = "*",
+    ) -> list[Row]:
+        query = self.table().select(columns).eq("user_id", user_id)
+        query = self._apply_filters(
+            query,
+            month_start=month_start,
+            next_month_start=next_month_start,
+            transaction_type=transaction_type,
+            category=category,
+        )
+        if cursor_id is not None:
+            query = query.gt("id", cursor_id)
+        result = query.order("id").limit(limit).execute()
+        return self.rows(result)
+
     def get_for_user(self, transaction_id: str, user_id: str) -> Row | None:
         result = (
             self.table()
