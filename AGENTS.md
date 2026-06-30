@@ -29,7 +29,7 @@ This document is the definitive guide for any AI coding agent (or human contribu
 | AI / LLM | Google Gemini (`google-genai` SDK) |
 | Frontend | React 19 + TypeScript + Vite |
 | Styling | Plain CSS (no CSS framework) |
-| Charts | CSS-only (no chart library used; recharts is installed but unused) |
+| Charts | CSS-only / dependency-free SVG (no chart library) |
 | HTTP client (frontend) | Axios |
 | Linting (backend) | Ruff (line length 88, target py311, rules E/F/I/UP) |
 | Linting (frontend) | ESLint + typescript-eslint |

@@ -575,24 +575,24 @@ POST   /webhooks/telegram
 ### Backend Module Map
 
 ```text
-app/main.py                        FastAPI app, CORS, router registration
-app/api/dependencies.py            Dependency factories and JWT current-user guard
-app/api/routes/*.py                REST API route handlers, including user settings
-app/bot/webhook.py                 Telegram webhook entrypoint + BackgroundTasks
-app/bot/commands.py                Admin command handling
-app/bot/onboarding.py              User access/onboarding dispatch
-app/bot/transactions.py            Bot transaction parsing + persistence
-app/bot/advisor.py                 Telegram advisor mode state machine
-app/repositories/*.py              Supabase query-builder repositories
-app/services/rule_parser.py        Deterministic Indonesian transaction parser
-app/services/gemini_parser.py      Gemini fallback transaction parser
-app/services/advisor_service.py    Advisor context aggregation + Gemini calls
-app/services/advisor_chat_service.py Shared advisor chat persistence/orchestration
-app/prompts/*.md                   Markdown system prompts loaded by services
-app/services/advisor_mode_timeout_service.py Expired advisor mode notifications
-app/services/cashflow_period.py    Shared cashflow period calculation
-app/core/*.py                      Settings and Telegram initData validation
-app/integrations/*.py              Supabase and Telegram HTTP clients
+app/main.py                                     FastAPI app, CORS, router registration
+app/api/dependencies.py                         Dependency factories and JWT current-user guard
+app/api/routes/*.py                             REST API route handlers, including user settings
+app/bot/webhook.py                              Telegram webhook entrypoint + BackgroundTasks
+app/bot/commands.py                             Admin command handling
+app/bot/onboarding.py                           User access/onboarding dispatch
+app/bot/transactions.py                         Bot transaction parsing + persistence
+app/bot/advisor.py                              Telegram advisor mode state machine
+app/repositories/*.py                           Supabase query-builder repositories
+app/services/rule_parser.py                     Deterministic Indonesian transaction parser
+app/services/gemini_parser.py                   Gemini fallback transaction parser
+app/services/advisor_service.py                 Advisor context aggregation + Gemini calls
+app/services/advisor_chat_service.py            Shared advisor chat persistence/orchestration
+app/prompts/*.md                                Markdown system prompts loaded by services
+app/services/advisor_mode_timeout_service.py    Expired advisor mode notifications
+app/services/cashflow_period.py                 Shared cashflow period calculation
+app/core/*.py                                   Settings and Telegram initData validation
+app/integrations/*.py                           Supabase and Telegram HTTP clients
 ```
 
 Notes:
@@ -604,18 +604,18 @@ Notes:
 ### Frontend Module Map
 
 ```text
-src/App.tsx                        Telegram auth bootstrap, page navigation, keep-alive cache
-src/api/*.ts                       Typed Axios API helpers, including settings
-src/components/DashboardOverview.tsx Summary with surplus rate, interactive category donut, compact trend bars, recent transactions
-src/components/PageMenu.tsx        Dashboard menu for Budget, AI Advisor, Transaksi, Pengaturan pages
-src/components/PageHeader.tsx      Shared page title/back navigation
-src/components/BudgetPanel.tsx     Budget CRUD and progress display
-src/components/InsightPanel.tsx    Advisor insights and chat UI
-src/components/TransactionsPanel.tsx Paginated compact transaction CRUD UI
-src/components/EditTransactionModal.tsx Modal edit form for transactions
-src/components/SettingsPanel.tsx   Cashflow period setting UI
-src/utils/currency.ts              IDR formatting helper
-src/styles.css                     Global plain CSS styling
+src/App.tsx                                     Telegram auth bootstrap, page navigation, keep-alive cache
+src/api/*.ts                                    Typed Axios API helpers, including settings
+src/components/DashboardOverview.tsx            Summary with surplus rate, interactive category donut, compact trend bars, recent transactions
+src/components/PageMenu.tsx                     Dashboard menu for Budget, AI Advisor, Transaksi, Pengaturan pages
+src/components/PageHeader.tsx                   Shared page title/back navigation
+src/components/BudgetPanel.tsx                  Budget CRUD and progress display
+src/components/InsightPanel.tsx                 Advisor insights and chat UI
+src/components/TransactionsPanel.tsx            Paginated compact transaction CRUD UI
+src/components/EditTransactionModal.tsx         Modal edit form for transactions
+src/components/SettingsPanel.tsx                Cashflow period setting UI
+src/utils/currency.ts                           IDR formatting helper
+src/styles.css                                  Global plain CSS styling
 ```
 
 ---
