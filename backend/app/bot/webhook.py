@@ -6,10 +6,19 @@ from pydantic import BaseModel
 
 from app.bot.commands import handle_admin_command
 from app.bot.onboarding import handle_registered_user_message
+from app.bot.token_claim import (
+    TOKEN_CLAIM_CALLBACK,
+    handle_token_claim,
+    handle_token_claim_callback,
+)
 from app.integrations.telegram_client import TelegramClient
 from app.repositories.advisor_chat_repository import AdvisorChatRepository
 from app.repositories.budgets_repository import BudgetsRepository
 from app.repositories.conversation_states_repository import ConversationStatesRepository
+from app.repositories.pending_token_claims_repository import (
+    PendingTokenClaimsRepository,
+)
+from app.repositories.registration_tokens_repository import RegistrationTokensRepository
 from app.repositories.transactions_repository import TransactionsRepository
 from app.repositories.users_repository import UsersRepository
 
@@ -47,6 +56,14 @@ def get_advisor_chat_repository() -> AdvisorChatRepository:
     return AdvisorChatRepository()
 
 
+def get_registration_tokens_repository() -> RegistrationTokensRepository:
+    return RegistrationTokensRepository()
+
+
+def get_pending_token_claims_repository() -> PendingTokenClaimsRepository:
+    return PendingTokenClaimsRepository()
+
+
 def get_telegram_client(
     settings: Annotated[Any, Depends(get_settings)],
 ) -> TelegramClient:
@@ -72,8 +89,53 @@ async def telegram_webhook(
         AdvisorChatRepository,
         Depends(get_advisor_chat_repository),
     ],
+    registration_tokens_repository: Annotated[
+        RegistrationTokensRepository,
+        Depends(get_registration_tokens_repository),
+    ],
+    pending_token_claims_repository: Annotated[
+        PendingTokenClaimsRepository,
+        Depends(get_pending_token_claims_repository),
+    ],
     telegram_client: Annotated[TelegramClient, Depends(get_telegram_client)],
 ) -> TelegramWebhookResponse:
+    # --- Callback query (inline button clicks) --------------------------------
+    callback_query = update.get("callback_query")
+    if isinstance(callback_query, dict):
+        callback_id = callback_query.get("id")
+        from_user = callback_query.get("from")
+        message = callback_query.get("message")
+        callback_data = callback_query.get("data")
+        if (
+            not isinstance(callback_id, str)
+            or not isinstance(from_user, dict)
+            or not isinstance(message, dict)
+        ):
+            return TelegramWebhookResponse(ok=True)
+
+        chat = message.get("chat")
+        sender_telegram_user_id = from_user.get("id")
+        chat_id = chat.get("id") if isinstance(chat, dict) else None
+        if not isinstance(sender_telegram_user_id, int) or not isinstance(chat_id, int):
+            return TelegramWebhookResponse(ok=True)
+
+        if callback_data == TOKEN_CLAIM_CALLBACK:
+            background_tasks.add_task(
+                process_token_claim_callback,
+                callback_query_id=callback_id,
+                sender_telegram_user_id=sender_telegram_user_id,
+                chat_id=chat_id,
+                pending_token_claims_repository=pending_token_claims_repository,
+                telegram_client=telegram_client,
+                claim_timeout_minutes=getattr(
+                    settings,
+                    "registration_token_claim_timeout_minutes",
+                    10,
+                ),
+            )
+        return TelegramWebhookResponse(ok=True)
+
+    # --- Regular text messages ------------------------------------------------
     message = update.get("message")
     if not isinstance(message, dict):
         return TelegramWebhookResponse(ok=True)
@@ -91,11 +153,14 @@ async def telegram_webhook(
     if not isinstance(sender_telegram_user_id, int) or not isinstance(chat_id, int):
         return TelegramWebhookResponse(ok=True)
 
+    telegram_username = from_user.get("username")
+
     background_tasks.add_task(
         process_telegram_message,
         text=text,
         sender_telegram_user_id=sender_telegram_user_id,
         chat_id=chat_id,
+        telegram_username=telegram_username,
         admin_telegram_id=settings.admin_telegram_id,
         users_repository=users_repository,
         transactions_repository=transactions_repository,
@@ -104,6 +169,15 @@ async def telegram_webhook(
         budgets_repository=budgets_repository,
         conversation_states_repository=conversation_states_repository,
         advisor_chat_repository=advisor_chat_repository,
+        registration_tokens_repository=registration_tokens_repository,
+        pending_token_claims_repository=pending_token_claims_repository,
+        token_expiry_days=getattr(settings, "registration_token_expiry_days", 30),
+        token_max_batch=getattr(settings, "registration_token_max_batch", 20),
+        claim_timeout_minutes=getattr(
+            settings,
+            "registration_token_claim_timeout_minutes",
+            10,
+        ),
         gemini_api_key=getattr(settings, "gemini_api_key", None),
         gemini_model=getattr(settings, "gemini_model", None),
         advisor_mode_timeout_minutes=getattr(
@@ -114,8 +188,32 @@ async def telegram_webhook(
         advisor_chat_history_limit=getattr(settings, "advisor_chat_history_limit", 60),
         admin_contact_telegram=getattr(settings, "admin_contact_telegram", ""),
         admin_contact_whatsapp=getattr(settings, "admin_contact_whatsapp", ""),
+        default_language=getattr(settings, "default_language", "id"),
+        default_currency=getattr(settings, "default_currency", "IDR"),
+        default_timezone=getattr(settings, "default_timezone", "Asia/Jakarta"),
     )
     return TelegramWebhookResponse(ok=True)
+
+
+async def process_token_claim_callback(
+    callback_query_id: str,
+    sender_telegram_user_id: int,
+    chat_id: int,
+    pending_token_claims_repository: PendingTokenClaimsRepository,
+    telegram_client: TelegramClient,
+    claim_timeout_minutes: int,
+) -> None:
+    try:
+        await handle_token_claim_callback(
+            callback_query_id=callback_query_id,
+            telegram_user_id=sender_telegram_user_id,
+            chat_id=chat_id,
+            pending_claims_repository=pending_token_claims_repository,
+            telegram_client=telegram_client,
+            claim_timeout_minutes=claim_timeout_minutes,
+        )
+    except Exception:
+        logger.exception("Failed to process Telegram callback query.")
 
 
 async def process_telegram_message(
@@ -130,12 +228,21 @@ async def process_telegram_message(
     budgets_repository: BudgetsRepository | None = None,
     conversation_states_repository: ConversationStatesRepository | None = None,
     advisor_chat_repository: AdvisorChatRepository | None = None,
+    registration_tokens_repository: RegistrationTokensRepository | None = None,
+    pending_token_claims_repository: PendingTokenClaimsRepository | None = None,
+    token_expiry_days: int = 30,
+    token_max_batch: int = 20,
+    claim_timeout_minutes: int = 10,
     gemini_api_key: str | None = None,
     gemini_model: str | None = None,
     advisor_mode_timeout_minutes: int = 15,
     advisor_chat_history_limit: int = 60,
     admin_contact_telegram: str = "",
     admin_contact_whatsapp: str = "",
+    telegram_username: str | None = None,
+    default_language: str = "id",
+    default_currency: str = "IDR",
+    default_timezone: str = "Asia/Jakarta",
 ) -> None:
     try:
         handled = await handle_admin_command(
@@ -145,9 +252,36 @@ async def process_telegram_message(
             admin_telegram_id=admin_telegram_id,
             users_repository=users_repository,
             telegram_client=telegram_client,
+            registration_tokens_repository=registration_tokens_repository,
+            token_expiry_days=token_expiry_days,
+            token_max_batch=token_max_batch,
         )
         if handled:
             return
+
+        if (
+            registration_tokens_repository is not None
+            and pending_token_claims_repository is not None
+        ):
+            token_handled = await handle_token_claim(
+                text=text,
+                telegram_user_id=sender_telegram_user_id,
+                chat_id=chat_id,
+                users_repository=users_repository,
+                pending_claims_repository=pending_token_claims_repository,
+                registration_tokens_repository=registration_tokens_repository,
+                telegram_client=telegram_client,
+                claim_timeout_minutes=claim_timeout_minutes,
+                admin_contact_telegram=admin_contact_telegram,
+                admin_contact_whatsapp=admin_contact_whatsapp,
+                telegram_username=telegram_username,
+                language_code=default_language,
+                currency=default_currency,
+                timezone=default_timezone,
+            )
+            if token_handled:
+                return
+
         await handle_registered_user_message(
             text=text,
             telegram_user_id=sender_telegram_user_id,

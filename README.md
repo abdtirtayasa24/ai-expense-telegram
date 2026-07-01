@@ -129,6 +129,10 @@ Use `.env.example` files as templates. Keep real secrets out of git.
 | `MINI_APP_URL` | ✅ | | Public frontend URL |
 | `TELEGRAM_BOT_TOKEN` | ✅ | | From BotFather |
 | `ADMIN_TELEGRAM_ID` | ✅ | | Numeric Telegram user ID |
+| `CRON_SECRET` | ✅ | | Used for internal job auth (advisor timeout + token cleanup) |
+| `REGISTRATION_TOKEN_EXPIRY_DAYS` | ✅ | | Default token expiry (default 30) |
+| `REGISTRATION_TOKEN_CLAIM_TIMEOUT_MINUTES` | ✅ | | Pending claim timeout after /start (default 10) |
+| `REGISTRATION_TOKEN_MAX_BATCH` | ✅ | | Max tokens per /token command (default 20) |
 | `SUPABASE_URL` | ✅ | | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | | **Server-side only** |
 | `GEMINI_API_KEY` | ✅ | | **Server-side only** |
@@ -138,7 +142,7 @@ Use `.env.example` files as templates. Keep real secrets out of git.
 
 ## Supabase Migrations
 
-Migrations are in `supabase/migrations/`. For MVP, the maintainer applies these manually via Supabase SQL editor. Run all migrations in numeric order, currently 001 through 012.
+Migrations are in `supabase/migrations/`. For MVP, the maintainer applies these manually via Supabase SQL editor. Run all migrations in numeric order, currently 001 through 014.
 
 ## Deployment
 

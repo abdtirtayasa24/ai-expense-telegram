@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     advisor_chat_history_limit: int = 60
     cron_secret: str | None = None
 
+    registration_token_expiry_days: int = 30
+    registration_token_claim_timeout_minutes: int = 10
+    registration_token_max_batch: int = 20
+
     model_config = SettingsConfigDict(env_file=".env")
 
 

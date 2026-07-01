@@ -43,6 +43,67 @@ ADVISOR_MODE_EXPIRED = (
 )
 ADVISOR_UNAVAILABLE = "Layanan advisor sedang tidak tersedia. Coba lagi nanti."
 
+# --- Token-based registration -------------------------------------------------
+
+INVALID_TOKEN_USAGE = (
+    "Format salah. Gunakan: /token [jumlah] [hari_berlaku]\n"
+    "Contoh: /token — buat 1 token berlaku 30 hari.\n"
+    "/token 5 — buat 5 token berlaku 30 hari.\n"
+    "/token 5 7 — buat 5 token berlaku 7 hari."
+)
+INVALID_TOKEN_BATCH = "Jumlah token maksimal 20 per perintah."
+INVALID_TOKEN_DAYS = "Jumlah hari harus antara 1 dan 365."
+TOKENS_GENERATED_HEADER = "Token berhasil dibuat (berlaku {days} hari):"
+TOKEN_PROMPT_BUTTON = "📨 Kirim Token"
+TOKEN_CLAIM_ACTIVE = (
+    "Token valid! Akun kamu berhasil didaftarkan.\n"
+    "Sekarang, boleh isi nama depan kamu?"
+)
+TOKEN_INVALID = (
+    "Maaf, token tidak valid atau sudah digunakan.\n"
+    "Coba kirim ulang token yang benar, atau hubungi administrator untuk "
+    "mendapatkan token baru."
+)
+TOKEN_EXPIRED = (
+    "Maaf, token sudah kadaluarsa.\n"
+    "Hubungi administrator untuk mendapatkan token baru."
+)
+TOKEN_ALREADY_CLAIMED = (
+    "Maaf, token sudah digunakan oleh orang lain.\n"
+    "Hubungi administrator untuk mendapatkan token baru."
+)
+TOKEN_PROMPT_EXPIRED = (
+    "Waktu untuk memasukkan token sudah habis.\n"
+    "Ketik /start untuk mencoba lagi."
+)
+TOKEN_CLAIM_PENDING_BUT_NOT_TOKEN = (
+    "Kirimkan tokennya ya, contoh format: K7M2-PQ9X-AB43\n"
+    "Kalau belum punya token, hubungi administrator."
+)
+TOKEN_FEATURE_UNAVAILABLE = "Layanan token pendaftaran sedang tidak tersedia."
+
+
+def token_claim_prompt(
+    telegram_user_id: int,
+    admin_contact_telegram: str,
+    admin_contact_whatsapp: str,
+) -> str:
+    return (
+        "Halo! Akun kamu belum terdaftar.\n\n"
+        f"Telegram ID kamu: {telegram_user_id}\n\n"
+        "Kalau kamu punya token pendaftaran, kirimkan tokennya sekarang "
+        "(contoh format: K7M2-PQ9X-AB43).\n\n"
+        "Kalau belum punya token, hubungi administrator:\n"
+        f"Telegram: {admin_contact_telegram}\n"
+        f"WhatsApp: {admin_contact_whatsapp}"
+    )
+
+
+def tokens_generated(days: int, tokens: list[str]) -> str:
+    lines = [TOKENS_GENERATED_HEADER.format(days=days), ""]
+    lines.extend(f"  {token}" for token in tokens)
+    return "\n".join(lines)
+
 
 def user_not_active_with_contact(
     telegram_user_id: int,

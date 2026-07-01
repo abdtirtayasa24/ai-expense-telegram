@@ -163,7 +163,7 @@ class SomeRepository(BaseRepository):
 ## Key Project Rules
 
 ### Do
-- ✅ Use private-by-default: users cannot self-register.
+- ✅ Use private-by-default: users cannot self-register. Admin can generate invite tokens via `/token` for users to self-register via `/start`.
 - ✅ Validate Telegram initData server-side with HMAC. Never trust `initDataUnsafe`.
 - ✅ Use `PARSER_CONFIDENCE_THRESHOLD` (0.75 default) to decide rule parser → Gemini fallback → clarification.
 - ✅ Call Gemini only after rule parser fails (cost saving).
@@ -206,6 +206,8 @@ class SomeRepository(BaseRepository):
 - `advisor_insights`: PK uuid, FK to users, `insight_type`, `summary`, `result`, `context_hash` for Supabase-backed Gemini insight caching.
 - `conversation_states`: PK uuid, FK to users, `state`, `payload` jsonb, `expires_at`.
 - `advisor_chat_messages`: PK uuid, FK to users, `role`, `content`, `source`, `metadata`, `created_at`.
+- `registration_tokens`: PK uuid, unique `token` (Crockford Base32, `XXXX-XXXX-XXXX`), `created_by_telegram_id`, `created_at`, `expires_at`, `claimed_at`, `claimed_by_telegram_id`, `claimed_user_id` (FK to users), `status` (active/claimed/expired). Claimed atomically via `claim_registration_token` RPC.
+- `pending_token_claims`: PK uuid, unique `telegram_user_id` (no FK to users — used for unregistered users), `chat_id`, `expires_at`, `created_at`. Cleaned up by `delete_expired_pending_token_claims` RPC.
 - See [docs/ARCHITECTURE.md#data-model](docs/ARCHITECTURE.md#data-model) for the full current data model, constraints, indexes, triggers, and RPCs.
 - Migrations applied manually by maintainer — agent does NOT run migrations.
 

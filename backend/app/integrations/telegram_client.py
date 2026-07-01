@@ -23,3 +23,19 @@ class TelegramClient:
             response = await client.post(f"{self.base_url}/sendMessage", json=payload)
             response.raise_for_status()
             return response.json()
+
+    async def answer_callback_query(
+        self,
+        callback_query_id: str,
+        text: str | None = None,
+    ):
+        payload: dict[str, object] = {"callback_query_id": callback_query_id}
+        if text is not None:
+            payload["text"] = text
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.post(
+                f"{self.base_url}/answerCallbackQuery",
+                json=payload,
+            )
+            response.raise_for_status()
+            return response.json()

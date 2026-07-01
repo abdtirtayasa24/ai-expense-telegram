@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
 from app.bot import responses
@@ -14,6 +15,15 @@ class TelegramMessageSender(Protocol):
     ) -> Any: ...
 
 
+class TokenCreator(Protocol):
+    def create_batch(
+        self,
+        count: int,
+        expires_at: datetime,
+        created_by_telegram_id: int | None = None,
+    ) -> list[Row]: ...
+
+
 async def handle_admin_command(
     text: str,
     sender_telegram_user_id: int,
@@ -21,9 +31,12 @@ async def handle_admin_command(
     admin_telegram_id: int,
     users_repository: UsersRepository,
     telegram_client: TelegramMessageSender,
+    registration_tokens_repository: TokenCreator | None = None,
+    token_expiry_days: int = 30,
+    token_max_batch: int = 20,
 ) -> bool:
     command, args = _parse_command(text)
-    if command not in {"/register", "/unreg", "/users"}:
+    if command not in {"/register", "/unreg", "/users", "/token"}:
         return False
 
     if sender_telegram_user_id != admin_telegram_id:
@@ -47,6 +60,18 @@ async def handle_admin_command(
             admin_telegram_id,
             users_repository,
             telegram_client,
+        )
+        return True
+
+    if command == "/token":
+        await _handle_generate_tokens(
+            args,
+            chat_id,
+            admin_telegram_id,
+            registration_tokens_repository,
+            telegram_client,
+            token_expiry_days,
+            token_max_batch,
         )
         return True
 
@@ -120,6 +145,55 @@ async def _handle_unregister(
 
     users_repository.deactivate(target_id)
     await telegram_client.send_message(chat_id, responses.USER_UNREGISTERED)
+
+
+async def _handle_generate_tokens(
+    args: list[str],
+    chat_id: int,
+    admin_telegram_id: int,
+    registration_tokens_repository: TokenCreator | None,
+    telegram_client: TelegramMessageSender,
+    token_expiry_days: int,
+    token_max_batch: int,
+) -> None:
+    if registration_tokens_repository is None:
+        await telegram_client.send_message(chat_id, responses.TOKEN_FEATURE_UNAVAILABLE)
+        return
+
+    count = 1
+    days = token_expiry_days
+
+    if len(args) >= 1:
+        try:
+            count = int(args[0])
+        except ValueError:
+            await telegram_client.send_message(chat_id, responses.INVALID_TOKEN_USAGE)
+            return
+    if len(args) >= 2:
+        try:
+            days = int(args[1])
+        except ValueError:
+            await telegram_client.send_message(chat_id, responses.INVALID_TOKEN_USAGE)
+            return
+
+    if count < 1 or count > token_max_batch:
+        await telegram_client.send_message(chat_id, responses.INVALID_TOKEN_BATCH)
+        return
+    if days < 1 or days > 365:
+        await telegram_client.send_message(chat_id, responses.INVALID_TOKEN_DAYS)
+        return
+
+    expires_at = datetime.now(UTC) + timedelta(days=days)
+    rows = registration_tokens_repository.create_batch(
+        count=count,
+        expires_at=expires_at,
+        created_by_telegram_id=admin_telegram_id,
+    )
+    tokens = [row["token"] for row in rows]
+    await telegram_client.send_message(
+        chat_id,
+        responses.tokens_generated(days, tokens),
+    )
 
 
 async def _handle_users(

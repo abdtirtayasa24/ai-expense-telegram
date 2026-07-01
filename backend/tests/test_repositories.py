@@ -49,9 +49,17 @@ class FakeRpcBuilder:
         self.params = params
 
     def execute(self) -> FakeResult:
-        if self.function_name != "claim_expired_conversation_states":
-            raise AssertionError(f"Unsupported RPC: {self.function_name}")
+        if self.function_name == "claim_expired_conversation_states":
+            return self._claim_expired_conversation_states()
+        if self.function_name == "claim_registration_token":
+            return self._claim_registration_token()
+        if self.function_name == "mark_expired_registration_tokens":
+            return self._mark_expired_registration_tokens()
+        if self.function_name == "delete_expired_pending_token_claims":
+            return self._delete_expired_pending_token_claims()
+        raise AssertionError(f"Unsupported RPC: {self.function_name}")
 
+    def _claim_expired_conversation_states(self) -> FakeResult:
         state = self.params["p_state"]
         limit = self.params.get("p_limit", 100)
         now = datetime.now(UTC).isoformat()
@@ -67,6 +75,109 @@ class FakeRpcBuilder:
             payload["timeout_claimed_at"] = now
             row["payload"] = payload
         return FakeResult([deepcopy(row) for row in claimed])
+
+    def _claim_registration_token(self) -> FakeResult:
+        from app.services.token_service import normalize_token as _norm
+
+        token_input = self.params["p_token"]
+        target = _norm(token_input)
+        now = datetime.now(UTC).isoformat()
+
+        tokens = self.client.tables.get("registration_tokens", [])
+        match = None
+        for row in tokens:
+            if _norm(row["token"]) == target:
+                match = row
+                break
+
+        if match is None:
+            return FakeResult([{"ok": False, "error": "not_found"}])
+        if match.get("status") == "claimed" or match.get("claimed_at") is not None:
+            return FakeResult([{"ok": False, "error": "already_claimed"}])
+        if match.get("expires_at", now) < now:
+            match["status"] = "expired"
+            return FakeResult([{"ok": False, "error": "expired"}])
+
+        users = self.client.tables.setdefault("users", [])
+        user_row = next(
+            (
+                row
+                for row in users
+                if row.get("telegram_user_id") == self.params["p_telegram_user_id"]
+            ),
+            None,
+        )
+        if user_row is not None and user_row.get("status") == "active":
+            return FakeResult([{"ok": False, "error": "already_registered"}])
+
+        if user_row is None:
+            user_id = self.client.make_id()
+            user_row = {
+                "id": user_id,
+                "telegram_user_id": self.params["p_telegram_user_id"],
+                "telegram_username": self.params.get("p_telegram_username"),
+                "role": "user",
+                "status": "active",
+                "onboarding_status": "pending",
+                "language_code": self.params.get("p_language_code", "id"),
+                "currency": self.params.get("p_currency", "IDR"),
+                "timezone": self.params.get("p_timezone", "Asia/Jakarta"),
+                "registered_by_telegram_id": match.get("created_by_telegram_id"),
+                "registered_at": now,
+            }
+            users.append(user_row)
+        else:
+            user_id = user_row["id"]
+            user_row.update(
+                {
+                    "telegram_username": self.params.get("p_telegram_username"),
+                    "status": "active",
+                    "onboarding_status": "pending",
+                    "language_code": self.params.get("p_language_code", "id"),
+                    "currency": self.params.get("p_currency", "IDR"),
+                    "timezone": self.params.get("p_timezone", "Asia/Jakarta"),
+                    "registered_by_telegram_id": match.get("created_by_telegram_id"),
+                    "registered_at": now,
+                    "unregistered_at": None,
+                }
+            )
+
+        match["status"] = "claimed"
+        match["claimed_at"] = now
+        match["claimed_by_telegram_id"] = self.params["p_telegram_user_id"]
+        match["claimed_user_id"] = user_id
+
+        return FakeResult([{"ok": True, "user_id": user_id}])
+
+    def _mark_expired_registration_tokens(self) -> FakeResult:
+        now = datetime.now(UTC).isoformat()
+        limit = self.params.get("p_limit", 200)
+        count = 0
+        candidates = []
+        for row in self.client.tables.get("registration_tokens", []):
+            if (
+                row.get("status") == "active"
+                and row.get("expires_at", now) < now
+                and row.get("claimed_at") is None
+            ):
+                candidates.append(row)
+        candidates.sort(key=lambda row: row.get("expires_at"))
+        for row in candidates[:limit]:
+            row["status"] = "expired"
+            count += 1
+        return FakeResult([count])
+
+    def _delete_expired_pending_token_claims(self) -> FakeResult:
+        now = datetime.now(UTC).isoformat()
+        limit = self.params.get("p_limit", 200)
+        rows = self.client.tables.get("pending_token_claims", [])
+        expired = [row for row in rows if row.get("expires_at", now) < now]
+        expired.sort(key=lambda row: row.get("expires_at"))
+        delete_ids = {row["id"] for row in expired[:limit]}
+        self.client.tables["pending_token_claims"] = [
+            row for row in rows if row.get("id") not in delete_ids
+        ]
+        return FakeResult([len(delete_ids)])
 
 
 class FakeQueryBuilder:

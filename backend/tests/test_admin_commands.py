@@ -7,6 +7,8 @@ from fastapi.testclient import TestClient
 from app.bot import responses
 from app.bot.commands import handle_admin_command
 from app.bot.webhook import (
+    get_pending_token_claims_repository,
+    get_registration_tokens_repository,
     get_settings,
     get_telegram_client,
     get_transactions_repository,
@@ -80,9 +82,54 @@ class FakeTransactionsRepository:
         self.transactions: list[dict[str, Any]] = []
 
 
+class FakeRegistrationTokensRepository:
+    def __init__(self) -> None:
+        self.created: list[dict[str, Any]] = []
+
+    def create_batch(
+        self,
+        count: int,
+        expires_at: Any,
+        created_by_telegram_id: int | None = None,
+    ) -> list[dict[str, Any]]:
+        from app.services.token_service import generate_token
+
+        rows = []
+        for _ in range(count):
+            row = {
+                "id": f"token-{len(self.created) + 1}",
+                "token": generate_token(),
+                "expires_at": expires_at.isoformat(),
+                "created_by_telegram_id": created_by_telegram_id,
+                "status": "active",
+            }
+            self.created.append(row)
+            rows.append(row)
+        return rows
+
+
+class FakePendingTokenClaimsRepository:
+    def __init__(self) -> None:
+        self.claims: dict[int, dict[str, Any]] = {}
+
+    def upsert(
+        self,
+        telegram_user_id: int,
+        chat_id: int,
+        expires_at: Any,
+    ) -> dict[str, Any]:
+        self.claims[telegram_user_id] = {
+            "telegram_user_id": telegram_user_id,
+            "chat_id": chat_id,
+            "expires_at": expires_at.isoformat(),
+        }
+        return self.claims[telegram_user_id]
+
+
 class FakeTelegramClient:
     def __init__(self) -> None:
         self.messages: list[tuple[int, str]] = []
+        self.callback_answers: list[tuple[str, str | None]] = []
 
     async def send_message(
         self,
@@ -91,6 +138,14 @@ class FakeTelegramClient:
         reply_markup: dict | None = None,
     ) -> dict[str, bool]:
         self.messages.append((chat_id, text))
+        return {"ok": True}
+
+    async def answer_callback_query(
+        self,
+        callback_query_id: str,
+        text: str | None = None,
+    ) -> dict[str, bool]:
+        self.callback_answers.append((callback_query_id, text))
         return {"ok": True}
 
 
@@ -117,6 +172,9 @@ async def run_command(
     repository: FakeUsersRepository,
     telegram_client: FakeTelegramClient,
     chat_id: int = 1234,
+    registration_tokens_repository: Any | None = None,
+    token_expiry_days: int = 30,
+    token_max_batch: int = 20,
 ) -> bool:
     return await handle_admin_command(
         text=text,
@@ -125,6 +183,9 @@ async def run_command(
         admin_telegram_id=999,
         users_repository=repository,  # type: ignore[arg-type]
         telegram_client=telegram_client,
+        registration_tokens_repository=registration_tokens_repository,
+        token_expiry_days=token_expiry_days,
+        token_max_batch=token_max_batch,
     )
 
 
@@ -273,3 +334,162 @@ async def test_telegram_webhook_hides_processing_errors() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"ok": True}
+
+
+async def test_admin_token_generates_single_token() -> None:
+    repository = FakeUsersRepository()
+    telegram_client = FakeTelegramClient()
+    tokens_repo = FakeRegistrationTokensRepository()
+
+    handled = await run_command(
+        "/token",
+        999,
+        repository,
+        telegram_client,
+        registration_tokens_repository=tokens_repo,
+    )
+
+    assert handled is True
+    assert len(tokens_repo.created) == 1
+    assert tokens_repo.created[0]["created_by_telegram_id"] == 999
+    chat_id, msg = telegram_client.messages[0]
+    assert chat_id == 1234
+    assert "Token berhasil dibuat" in msg
+    assert tokens_repo.created[0]["token"] in msg
+
+
+async def test_admin_token_generates_batch_with_custom_days() -> None:
+    repository = FakeUsersRepository()
+    telegram_client = FakeTelegramClient()
+    tokens_repo = FakeRegistrationTokensRepository()
+
+    handled = await run_command(
+        "/token 5 7",
+        999,
+        repository,
+        telegram_client,
+        registration_tokens_repository=tokens_repo,
+    )
+
+    assert handled is True
+    assert len(tokens_repo.created) == 5
+    _, msg = telegram_client.messages[0]
+    assert "berlaku 7 hari" in msg
+
+
+async def test_admin_token_rejects_count_over_max() -> None:
+    repository = FakeUsersRepository()
+    telegram_client = FakeTelegramClient()
+    tokens_repo = FakeRegistrationTokensRepository()
+
+    handled = await run_command(
+        "/token 21",
+        999,
+        repository,
+        telegram_client,
+        registration_tokens_repository=tokens_repo,
+    )
+
+    assert handled is True
+    assert len(tokens_repo.created) == 0
+    assert telegram_client.messages[0] == (1234, responses.INVALID_TOKEN_BATCH)
+
+
+async def test_admin_token_rejects_invalid_days() -> None:
+    repository = FakeUsersRepository()
+    telegram_client = FakeTelegramClient()
+    tokens_repo = FakeRegistrationTokensRepository()
+
+    handled = await run_command(
+        "/token 5 0",
+        999,
+        repository,
+        telegram_client,
+        registration_tokens_repository=tokens_repo,
+    )
+
+    assert handled is True
+    assert len(tokens_repo.created) == 0
+    assert telegram_client.messages[0] == (1234, responses.INVALID_TOKEN_DAYS)
+
+
+async def test_admin_token_rejects_non_admin() -> None:
+    repository = FakeUsersRepository()
+    telegram_client = FakeTelegramClient()
+    tokens_repo = FakeRegistrationTokensRepository()
+
+    handled = await run_command(
+        "/token",
+        555,
+        repository,
+        telegram_client,
+        registration_tokens_repository=tokens_repo,
+    )
+
+    assert handled is True
+    assert len(tokens_repo.created) == 0
+    assert telegram_client.messages[0] == (1234, responses.ACCESS_DENIED)
+
+
+async def test_admin_token_rejects_bad_usage_format() -> None:
+    repository = FakeUsersRepository()
+    telegram_client = FakeTelegramClient()
+    tokens_repo = FakeRegistrationTokensRepository()
+
+    handled = await run_command(
+        "/token abc",
+        999,
+        repository,
+        telegram_client,
+        registration_tokens_repository=tokens_repo,
+    )
+
+    assert handled is True
+    assert len(tokens_repo.created) == 0
+    assert telegram_client.messages[0] == (1234, responses.INVALID_TOKEN_USAGE)
+
+
+async def test_telegram_webhook_accepts_token_claim_callback_query() -> None:
+    telegram_client = FakeTelegramClient()
+    pending_claims = FakePendingTokenClaimsRepository()
+
+    app.dependency_overrides[get_settings] = lambda: FakeSettings()
+    app.dependency_overrides[get_users_repository] = lambda: FakeUsersRepository()
+    app.dependency_overrides[get_transactions_repository] = FakeTransactionsRepository
+    app.dependency_overrides[get_registration_tokens_repository] = (
+        FakeRegistrationTokensRepository
+    )
+    app.dependency_overrides[get_pending_token_claims_repository] = (
+        lambda: pending_claims
+    )
+    app.dependency_overrides[get_telegram_client] = lambda: telegram_client
+
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/webhooks/telegram",
+            json={
+                "update_id": 1,
+                "callback_query": {
+                    "id": "callback-1",
+                    "data": "token_claim",
+                    "from": {"id": 111},
+                    "message": {
+                        "message_id": 1,
+                        "chat": {"id": 1234},
+                    },
+                },
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    assert 111 in pending_claims.claims
+    assert telegram_client.callback_answers == [
+        ("callback-1", "Silakan kirim token pendaftaran kamu.")
+    ]
+    assert telegram_client.messages == [
+        (1234, "Kirimkan tokennya sekarang ya, contoh format: K7M2-PQ9X-AB43")
+    ]

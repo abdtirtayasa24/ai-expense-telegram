@@ -256,6 +256,54 @@ end
 @enduml
 ```
 
+### Flow 4b: Token-Based Self-Registration
+
+```plantuml
+@startuml
+actor Admin
+actor User
+participant Telegram
+participant "FastAPI Webhook" as API
+database "Supabase PostgreSQL" as DB
+
+Admin -> Telegram : /token 5 30
+Telegram -> API : webhook update
+API -> API : validate sender == ADMIN_TELEGRAM_ID
+API -> DB : insert registration_tokens (active, expires_at=now+30d)
+API -> Telegram : list of generated tokens
+
+User -> Telegram : /start
+Telegram -> API : webhook update
+API -> DB : find user by telegram_user_id
+alt user not found
+  API -> DB : upsert pending_token_claims (expires_at=now+10m)
+  API -> Telegram : rejection + token prompt + inline button "Kirim Token"
+end
+
+User -> Telegram : click "Kirim Token" button
+Telegram -> API : callback_query
+API -> DB : refresh pending_token_claims
+API -> Telegram : answer callback + ask for token
+
+User -> Telegram : K7M2-PQ9X-AB43
+Telegram -> API : webhook update
+API -> DB : find active pending_token_claims for telegram_user_id
+alt no active pending claim
+  API -> Telegram : rejection message
+else active pending claim
+  API -> DB : RPC claim_registration_token(token, telegram_user_id, ...)
+  alt token valid
+    API -> DB : insert users (active, onboarding=pending)
+    API -> DB : update registration_tokens status=claimed
+    API -> DB : delete pending_token_claims
+    API -> Telegram : token valid + ask first name
+  else token invalid/expired/claimed
+    API -> Telegram : error message (keep pending claim for retry)
+  end
+end
+@enduml
+```
+
 ### Flow 5: User Records Expense
 
 ```plantuml
@@ -471,11 +519,22 @@ API -> Cron : { ok: true, notified: n }
    - /register <telegram_id>
    - /unreg <telegram_id>
    - /users
+   - /token [count] [days]
    Validate sender == ADMIN_TELEGRAM_ID.
-3. For normal app usage:
+3. If update is a callback_query with callback_data == "token_claim":
+   - refresh pending_token_claims for telegram_user_id.
+   - answer the callback and ask the user to send their token.
+4. For normal app usage (text messages):
    - find user by telegram_user_id.
-4. If user not found or inactive:
-   - reject.
+   - If user not found or inactive:
+     - If message is /start: create/refresh pending_token_claims, reply with
+       rejection + token prompt + inline "Kirim Token" button.
+     - If user has an active pending_token_claims: treat message as a token and
+       attempt to claim it via claim_registration_token RPC.
+       - On success: create user (active, onboarding=pending), delete pending
+         claim, send success + ask first name.
+       - On failure: send error message, keep pending claim for retry.
+     - Otherwise: reject.
 5. If user active but onboarding_status != completed:
    - run onboarding flow.
 6. If user active and onboarding completed:
@@ -565,6 +624,7 @@ POST   /advisor/chat
 GET    /settings
 PATCH  /settings/cashflow-period
 POST   /internal/jobs/advisor-mode-timeouts
+POST   /internal/jobs/expired-token-cleanup
 POST   /webhooks/telegram
 ```
 
@@ -583,6 +643,7 @@ app/bot/commands.py                             Admin command handling
 app/bot/onboarding.py                           User access/onboarding dispatch
 app/bot/transactions.py                         Bot transaction parsing + persistence
 app/bot/advisor.py                              Telegram advisor mode state machine
+app/bot/token_claim.py                          Token-based self-registration flow + callback handling
 app/repositories/*.py                           Supabase query-builder repositories
 app/services/rule_parser.py                     Deterministic Indonesian transaction parser
 app/services/gemini_parser.py                   Gemini fallback transaction parser
@@ -590,6 +651,8 @@ app/services/advisor_service.py                 Advisor context aggregation + Ge
 app/services/advisor_chat_service.py            Shared advisor chat persistence/orchestration
 app/prompts/*.md                                Markdown system prompts loaded by services
 app/services/advisor_mode_timeout_service.py    Expired advisor mode notifications
+app/services/token_service.py                   Crockford Base32 token generation/normalization
+app/services/registration_token_cleanup_service.py  Expired registration token + pending claim cleanup
 app/services/cashflow_period.py                 Shared cashflow period calculation
 app/core/*.py                                   Settings and Telegram initData validation
 app/integrations/*.py                           Supabase and Telegram HTTP clients
@@ -710,11 +773,34 @@ entity advisor_chat_messages {
   created_at : timestamptz
 }
 
+entity registration_tokens {
+  * id : uuid
+  --
+  token : text
+  created_by_telegram_id : bigint
+  created_at : timestamptz
+  expires_at : timestamptz
+  claimed_at : timestamptz
+  claimed_by_telegram_id : bigint
+  claimed_user_id : uuid
+  status : text
+}
+
+entity pending_token_claims {
+  * id : uuid
+  --
+  telegram_user_id : bigint
+  chat_id : bigint
+  expires_at : timestamptz
+  created_at : timestamptz
+}
+
 users ||--o{ transactions
 users ||--o{ budgets
 users ||--o{ advisor_insights
 users ||--o{ conversation_states
 users ||--o{ advisor_chat_messages
+users ||--o{ registration_tokens
 @enduml
 ```
 
@@ -737,6 +823,12 @@ budgets unique(user_id, category, month)
 
 advisor_chat_messages.role in ('user', 'assistant')
 advisor_chat_messages.source in ('telegram_chat', 'mini_app')
+
+registration_tokens.token unique (Crockford Base32: XXXX-XXXX-XXXX)
+registration_tokens.status in ('active', 'claimed', 'expired')
+registration_tokens.claimed_user_id references users(id) on delete set null
+
+pending_token_claims.telegram_user_id unique (no FK — unregistered users)
 ```
 
 Application-level transaction categories are fixed in Pydantic schemas and UI types:
@@ -762,6 +854,9 @@ idx_conversation_states_state_expires           conversation_states(state, expir
 idx_advisor_insights_context_cache              advisor_insights(user_id, period_start, period_end, insight_type, context_hash, created_at desc) where context_hash is not null
 idx_advisor_insights_user_period_created        advisor_insights(user_id, period_start, period_end, created_at desc)
 idx_advisor_chat_messages_user_created_at       advisor_chat_messages(user_id, created_at desc)
+idx_registration_tokens_token                    registration_tokens(token)
+idx_registration_tokens_status_expires           registration_tokens(status, expires_at)
+idx_pending_token_claims_expires                 pending_token_claims(expires_at)
 ```
 
 RLS is enabled on all application tables. The backend uses the server-side Supabase service role key; direct `anon` and `authenticated` table access is revoked.
@@ -774,5 +869,11 @@ transactions
 ```
 
 `claim_expired_conversation_states(p_state, p_limit, p_claim_timeout_seconds)` is a Supabase RPC used by the internal advisor-mode timeout job. It claims expired states with `for update skip locked` and stores `payload.timeout_claimed_at` to reduce duplicate timeout notifications across concurrent job runs.
+
+`claim_registration_token(p_token, p_telegram_user_id, p_telegram_username, p_language_code, p_currency, p_timezone)` is a SECURITY DEFINER RPC used by the token-claim flow. It normalizes the token (uppercase, strip hyphens), locks the matching `registration_tokens` row `for update`, checks status/expiry, inserts a new `users` row (active, onboarding=pending), marks the token as claimed, and returns `{ok: true, user_id}` or `{ok: false, error: "not_found"|"already_claimed"|"expired"}`.
+
+`mark_expired_registration_tokens(p_limit)` is a SECURITY DEFINER RPC used by the expired-token cleanup cron job. It flips unclaimed, past-expiry tokens from `active` to `expired`.
+
+`delete_expired_pending_token_claims(p_limit)` is a SECURITY DEFINER RPC used by the expired-token cleanup cron job. It deletes rows from `pending_token_claims` where `expires_at < now()`.
 
 ---
