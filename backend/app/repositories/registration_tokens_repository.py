@@ -88,8 +88,14 @@ class RegistrationTokensRepository(BaseRepository):
                 "p_timezone": timezone,
             },
         ).execute()
-        rows = self.rows(result)
-        return rows[0] if rows else {CLAIM_OK: False, "error": "not_found"}
+        data = result.data
+        if isinstance(data, dict):
+            return data
+        if isinstance(data, list) and data:
+            row = data[0]
+            if isinstance(row, dict):
+                return row
+        return {CLAIM_OK: False, "error": "not_found"}
 
     def mark_expired(self, limit: int = 200) -> int:
         """Flip unclaimed past-expiry tokens to ``expired`` status via RPC."""
